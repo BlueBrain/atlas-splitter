@@ -6,10 +6,10 @@ from pathlib import Path
 import numpy as np
 import numpy.testing as npt
 import pytest
-from atlas_commons.exceptions import AtlasCommonsError
 from voxcell import RegionMap
 
 import atlas_splitter.layer_splitter.isocortex_layer_23 as tested
+from atlas_splitter.exceptions import AtlasSplitterError
 from tests.layer_splitter.utils import get_splitting_input_data
 
 TEST_PATH = Path(__file__).parent.parent
@@ -76,7 +76,7 @@ def get_isocortex_hierarchy_excerpt():
 
 
 def test_get_isocortex_hierarchy():
-    with pytest.raises(AtlasCommonsError):
+    with pytest.raises(AtlasSplitterError):
         allen_hierarchy = {
             "root": [
                 {
@@ -92,7 +92,7 @@ def test_get_isocortex_hierarchy():
             ]
         }
         tested.get_isocortex_hierarchy(allen_hierarchy)
-    with pytest.raises(AtlasCommonsError):
+    with pytest.raises(AtlasSplitterError):
         allen_hierarchy = {
             "msg": [
                 {
@@ -245,5 +245,5 @@ def test_split_isocortex_layer_23_exception():
     data = get_splitting_input_data()
     data["direction_vectors"][1, 25, 25] = [np.nan] * 3
 
-    with pytest.raises(AtlasCommonsError, match=".*\[NaN, NaN, NaN\] direction vector.*"):
+    with pytest.raises(AtlasSplitterError, match=".*\\[NaN, NaN, NaN\\] direction vector.*"):
         tested.split(allen_hierarchy, data["annotation"], data["direction_vectors"], data["ratio"])

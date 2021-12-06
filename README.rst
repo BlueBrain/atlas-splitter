@@ -1,7 +1,12 @@
 Overview
 =========
 
-This project contains to split brain atlas regions and refine annotations accordingly.
+This project contains tools to split brain atlas regions and refine annotations accordingly.
+
+After installation, you can display the available command lines with the following ``bash`` command:
+.. code-block:: bash
+
+    atlas-splitter --help
 
 Installation
 ============

@@ -26,12 +26,13 @@ from itertools import count
 from typing import TYPE_CHECKING, Any, Dict, Iterator, Set
 
 import numpy as np  # type: ignore
-from atlas_commons.exceptions import AtlasCommonsError
 
 # pylint: disable=ungrouped-imports
 from cgal_pybind import slice_volume
 from nptyping import NDArray  # type: ignore
 from voxcell import RegionMap  # type: ignore
+
+from atlas_splitter.exceptions import AtlasSplitterError
 
 L = logging.getLogger(__name__)
 
@@ -56,14 +57,14 @@ def get_isocortex_hierarchy(allen_hierachy: HierarchyDict):
     """
     error_msg = "Wrong input. The AIBS 1.json file is expected."
     if "msg" not in allen_hierachy:
-        raise AtlasCommonsError(error_msg)
+        raise AtlasSplitterError(error_msg)
 
     hierarchy = allen_hierachy["msg"][0]
     try:
         while hierarchy["acronym"] != "Isocortex":
             hierarchy = hierarchy["children"][0]
     except KeyError as error:
-        raise AtlasCommonsError(error_msg) from error
+        raise AtlasSplitterError(error_msg) from error
 
     return hierarchy
 
@@ -86,7 +87,7 @@ def create_id_generator(region_map: "RegionMap") -> Iterator[int]:
 
 def _assert_is_leaf_node(node) -> None:
     """
-    Raises an AssertionError if `node` is not a leaf node.
+    Raises an AtalasSplitterError if `node` is not a leaf node.
 
     Args:
         node: node of the hierarchy tree. Dict of the form
@@ -105,13 +106,13 @@ def _assert_is_leaf_node(node) -> None:
                   },
 
         }
-    Raise:
-        AtlasCommonsError if `node` is a not a leaf `node`.
+    Raises:
+        AtlasSplitterError if `node` is a not a leaf `node`.
     """
     if "children" not in node:
-        raise AtlasCommonsError(f'Missing "children" key for region {node["name"]}.')
+        raise AtlasSplitterError(f'Missing "children" key for region {node["name"]}.')
     if node["children"] != []:
-        raise AtlasCommonsError(
+        raise AtlasSplitterError(
             f'Region {node["name"]} has an unexpected "children" value: '
             f'{node["children"]}. Expected: [].'
         )
@@ -336,10 +337,11 @@ def split(
     # No direction vectors should be [NaN, NaN, NaN] inside the region to split
     volume = np.isin(annotation.raw, list(layers_2_and_3_ids))
     if np.any(np.isnan(direction_vectors[volume])):
-        raise AtlasCommonsError(
+        raise AtlasSplitterError(
             "The 3D region to split, that is layer 2/3, contains [NaN, NaN, NaN] "
             "direction vectors. Consider interpolating these vectors by valid ones. "
-            "See, e.g., ``atlas-building-tools direction-vectors interpolation --help``."
+            "See, e.g., ``atlas-direction-vectors`` documentation and"
+            "``atlas-direction-vectors interpolation --help`` in particular."
         )
     L.info("Splitting the layer 2/3 volume using a thickness ratio of %f ...", thickness_ratio)
     # The voxels labeled with 1 (resp. 2) are the voxels whose cortical depth is at most
