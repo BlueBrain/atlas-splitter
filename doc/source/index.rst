@@ -1,3 +1,5 @@
+.. image:: ../../atlas-splitter.jpg
+
 Documentation
 =============
 
