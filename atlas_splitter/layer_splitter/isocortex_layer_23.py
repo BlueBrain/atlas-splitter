@@ -18,26 +18,22 @@ For each voxel of the original layer 2/3, we compute its approximate distances t
 the bottom of this volume. We use subsequently a thickness ratio from the scientific literature to
 decide whether a voxel belongs either to layer 2 or layer 3.
 """
+from __future__ import annotations
 
 import copy
 import logging
 from collections import defaultdict
 from itertools import count
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Set
+from typing import Any, Dict, Iterator, Set
 
-import numpy as np  # type: ignore
-
-# pylint: disable=ungrouped-imports
+import numpy as np
+from atlas_commons.typing import BoolArray, FloatArray, NDArray
 from cgal_pybind import slice_volume
-from nptyping import NDArray  # type: ignore
-from voxcell import RegionMap  # type: ignore
+from voxcell import RegionMap, VoxelData
 
 from atlas_splitter.exceptions import AtlasSplitterError
 
 L = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from voxcell import VoxelData  # type: ignore
 
 # The following constants are documented in Section 5.1.1.4 of the release report of the
 # Neocortex Tissue Reconstruction.
@@ -69,7 +65,7 @@ def get_isocortex_hierarchy(allen_hierachy: HierarchyDict):
     return hierarchy
 
 
-def create_id_generator(region_map: "RegionMap") -> Iterator[int]:
+def create_id_generator(region_map: RegionMap) -> Iterator[int]:
     """Create an identifiers generator.
 
     The generator produces an identifier which is different from all
@@ -255,8 +251,8 @@ def _edit_layer_23_hierarchy(
 
 
 def _edit_layer_23_volume(
-    volume: NDArray[int],
-    layer_2_mask: NDArray[bool],
+    volume: NDArray[np.integer],
+    layer_2_mask: BoolArray,
     layer_23_ids: Set[int],
     new_layer_ids: Dict[int, Dict[str, int]],
 ) -> None:
@@ -277,7 +273,7 @@ def _edit_layer_23_volume(
             :fun:`atlas_splitter.layer_splitter.isocortex_layer_23,py.edit_hierarchy`
     """
 
-    def change_volume(id_: int, new_id: int, layer_mask: NDArray[bool]) -> None:
+    def change_volume(id_: int, new_id: int, layer_mask: BoolArray) -> None:
         """
         Modify `volume` by a assigining a new identifier to the voxels defined by `layer_mask`.
 
@@ -300,8 +296,8 @@ def _edit_layer_23_volume(
 
 def split(
     hierarchy: HierarchyDict,
-    annotation: "VoxelData",
-    direction_vectors: NDArray[float],
+    annotation: VoxelData,
+    direction_vectors: FloatArray,
     thickness_ratio: float = DEFAULT_RATIO,
 ) -> None:
     """
