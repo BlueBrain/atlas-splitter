@@ -1,20 +1,14 @@
 """
-Algorithm 
+Algorithm introducing volumes of 33 barrels coming from segmentation results of the 
+average brain atlas images from Allen institute. Barrels are introduced as children 
+to somatosensory area of barrel cortex layer 4. 
 
+* Introduction of barrels to the hierarchy.json
+* Introduction of the annotated volues to the brain_regions.nrrd
+
+The code relays on pd.DataFrame contining the annotated positions of each barrel voxel
+in x,y,z coordinates.
 """
-
-# ## Add Barrels as children to Layer 4 of Barrel Field
-# # Update the Hierarchy to include barrels
-# TODO - to close the efforts:
-#
-# 1. Edit the SSp-bfd4 to have new children of the barrel volumes in the hierarchy
-# 2. Edit the brain_regions to include the new hierarchy elements (get indices to have a new id)
-#
-# Issues / Questions:
-#
-# 1. How do I get the access to the hierarchy in an elegant way?
-# 2. What about other nrrd files updates?
-# 3. Plan for updating the brain_regions.nrrd
 import copy
 import logging
 import blueetl
@@ -69,22 +63,6 @@ def create_id_generator(region_map: RegionMap) -> Iterator[int]:
     return count(start=last + 1)
 
 
-def change_volume(volume, id_: int, new_id: int, layer_mask) -> None:
-    """
-    Modify `volume` by a assigining a new identifier to the voxels defined by `layer_mask`.
-
-    The modification is done in place.
-
-    Args:
-        id_: the original identifier to be changed.
-        new_id: the new identifier to be assigned.
-        layer_mask: binary mask of the voxels of the layer where the change is requested.
-    """
-    change_to_layer = np.logical_and(volume == id_, layer_mask)
-    if np.any(change_to_layer):
-        volume[change_to_layer] = new_id
-
-
 def get_hierarchy_by_acronym(hierarchy, acronym):  
     for index, child in enumerate(hierarchy["children"]):
         if child["acronym"] == acronym:
@@ -92,15 +70,15 @@ def get_hierarchy_by_acronym(hierarchy, acronym):
 
 
 def positions_to_mask(positions, mask, orientation) -> BoolArray:
-    """_summary_
+    """Change x,y,z position coordinates into binary mask in 3D BoolArray
 
     Args:
-        positions (_type_): _description_
-        mask (_type_): _description_
-        orientation (_type_): _description_
+        positions (np.array): 2D : x,y,z positions
+        mask (BoolArray): mask sample to reproduce the dimensions 
+        orientation (VoxelData): _description_
 
     Returns:
-        _type_: _description_
+        BoolArray: mask of the region described by the positions
     """    
     mask = np.zeros_like(mask)
     indices = orientation.positions_to_indices(positions)
