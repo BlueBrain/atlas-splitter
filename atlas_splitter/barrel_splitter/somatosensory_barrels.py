@@ -11,7 +11,6 @@ in x,y,z coordinates.
 """
 import copy
 import logging
-import blueetl
 import numpy as np
 import pandas as pd
 from typing import Any, Dict, Iterator, Set
@@ -164,7 +163,7 @@ def edit_volume(
     orientation = atlas.load_data("orientation")
 
     for name in barrel_positions.barrel.unique():
-        positions = barrel_positions.etl.q(barrel=name)[["x", "y", "z"]]
+        positions = barrel_positions[barrel_positions.barrel == name][["x", "y", "z"]]
         barrel_mask = positions_to_mask(positions.values, mask, orientation).astype(
             np.uint8
         )
@@ -179,13 +178,13 @@ def split_barrels(
     barrel_positions: pd.DataFrame,
     atlas,
 ):
-    """
-    Introduces the barrels specified by a DataFrame to layer 4 of
-    barrel cortex region in place.
+    """Introduce the barrels to layer 4 of barrel cortex in the mouse atlas
+    annotation in place. Positions of the voxels need to be specified by a DataFrame.
 
     The `hierarchy` dict and the `annotation` are modified in-place.
     All of the barrels present in the DF are introduced based on their
     x, y, z voxel positions.
+
 
     Args:
         hierarchy (HierarchyDict): brain regions hierarchy dict
