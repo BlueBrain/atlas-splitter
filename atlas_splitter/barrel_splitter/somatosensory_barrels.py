@@ -160,9 +160,7 @@ def edit_hierarchy(
         children_names (list): list of children volumes to be integrated
     """
 
-    hierarchy_levels = np.array(
-        region_map.get(start_index, attr="acronym", with_ascendants=True)
-    )
+    hierarchy_levels = np.array(region_map.get(start_index, attr="acronym", with_ascendants=True))
     iso_index = np.where(hierarchy_levels == "Isocortex")[0][0]
     hierarchy_levels = hierarchy_levels[:iso_index]
     hierarchy_ = get_isocortex_hierarchy(hierarchy)
@@ -216,9 +214,7 @@ def edit_volume(
         new_ids (Dict[str, int]): set of new ids
     """
     for name in barrel_positions.barrel.unique():
-        positions = barrel_positions[barrel_positions.barrel == name][
-            ["x", "y", "z"]
-        ].values
+        positions = barrel_positions[barrel_positions.barrel == name][["x", "y", "z"]].values
         for layer in layers:
             region = f"SSp-bfd{layer}"
             new_id = new_ids[name + "_layers"][layer]

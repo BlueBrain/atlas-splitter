@@ -31,12 +31,8 @@ def app():
     required=True,
     help=("Path to the DataFrame with barrel positions and labels."),
 )
-@click.option(
-    "--output-hierarchy-path", required=True, help="Path of the json file to write"
-)
-@click.option(
-    "--output-annotation-path", required=True, help="Path of the nrrd file to write"
-)
+@click.option("--output-hierarchy-path", required=True, help="Path of the json file to write")
+@click.option("--output-annotation-path", required=True, help="Path of the nrrd file to write")
 @log_args(L)
 def split_barrel_columns(
     verbose,
