@@ -1,4 +1,5 @@
 import pytest
+
 import atlas_splitter.barrel_splitter.somatosensory_barrels as tested
 
 

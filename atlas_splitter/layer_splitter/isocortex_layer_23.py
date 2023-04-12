@@ -32,6 +32,7 @@ from cgal_pybind import slice_volume
 from voxcell import RegionMap, VoxelData
 
 from atlas_splitter.exceptions import AtlasSplitterError
+from atlas_splitter.utils import create_id_generator, get_isocortex_hierarchy
 
 L = logging.getLogger(__name__)
 
@@ -42,43 +43,6 @@ DEFAULT_L3_THICKNESS = 225.3199
 DEFAULT_RATIO = DEFAULT_L2_THICKNESS / (DEFAULT_L2_THICKNESS + DEFAULT_L3_THICKNESS)
 
 HierarchyDict = Dict[str, Any]
-
-
-def get_isocortex_hierarchy(allen_hierachy: HierarchyDict):
-    """
-    Extract the hierarchy dict of the iscortex from AIBS hierarchy dict.
-    Args:
-        allen_hierarchy: AIBS hierarchy dict instantiated from
-            http://api.brain-map.org/api/v2/structure_graph_download/1.json.
-    """
-    error_msg = "Wrong input. The AIBS 1.json file is expected."
-    if "msg" not in allen_hierachy:
-        raise AtlasSplitterError(error_msg)
-
-    hierarchy = allen_hierachy["msg"][0]
-    try:
-        while hierarchy["acronym"] != "Isocortex":
-            hierarchy = hierarchy["children"][0]
-    except KeyError as error:
-        raise AtlasSplitterError(error_msg) from error
-
-    return hierarchy
-
-
-def create_id_generator(region_map: RegionMap) -> Iterator[int]:
-    """Create an identifiers generator.
-
-    The generator produces an identifier which is different from all
-    the previous ones and from the identifiers in use in `self.region_map`.
-
-    Args:
-        region_map: map to navigate the brain region hierarchy.
-
-    Return:
-        iterator providing the next id.
-    """
-    last = max(region_map.find("root", attr="acronym", with_descendants=True))
-    return count(start=last + 1)
 
 
 def _assert_is_leaf_node(node) -> None:

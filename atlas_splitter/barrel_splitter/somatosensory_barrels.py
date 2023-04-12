@@ -6,59 +6,22 @@ to somatosensory area of barrel cortex and then subdivided into layers.
 * Introduction of barrels to the hierarchy.json
 * Introduction of the annotated volumes to the annotations.nrrd
 
-The code relays on pd.DataFrame contaaining the annotated positions of each barrel voxel
+The code relays on pd.DataFrame containing the annotated positions of each barrel voxel
 in x,y,z coordinates.
 """
 import copy
 import logging
+from collections import defaultdict
+from typing import Any, Dict, List
+
 import numpy as np
 import pandas as pd
-from typing import Any, Dict, Iterator, List
-from itertools import count
-from collections import defaultdict
 from voxcell import RegionMap, VoxelData
-from atlas_splitter.exceptions import AtlasSplitterError
 
+from atlas_splitter.utils import create_id_generator, get_isocortex_hierarchy
 
 L = logging.getLogger(__name__)
 HierarchyDict = Dict[str, Any]
-
-
-def get_isocortex_hierarchy(allen_hierachy: HierarchyDict):
-    """
-    Extract the hierarchy dict of the iscortex from AIBS hierarchy dict.
-    Args:
-        allen_hierarchy: AIBS hierarchy dict instantiated from
-            http://api.brain-map.org/api/v2/structure_graph_download/1.json.
-    """
-    error_msg = "Wrong input. The AIBS 1.json file is expected."
-    if "msg" not in allen_hierachy:
-        raise AtlasSplitterError(error_msg)
-
-    hierarchy = allen_hierachy["msg"][0]
-    try:
-        while hierarchy["acronym"] != "Isocortex":
-            hierarchy = hierarchy["children"][0]
-    except KeyError as error:
-        raise AtlasSplitterError(error_msg) from error
-
-    return hierarchy
-
-
-def create_id_generator(region_map: RegionMap) -> Iterator[int]:
-    """Create an identifiers generator.
-
-    The generator produces an identifier which is different from all
-    the previous ones and from the ident ifiers in use in `self.region_map`.
-
-    Args:
-        region_map: map to navigate the brain region hierarchy.
-
-    Returns:
-        iterator providing the next id.
-    """
-    last = max(region_map.find("root", attr="acronym", with_descendants=True))
-    return count(start=last + 1)
 
 
 def layer_ids(id_generator, names, layers):
@@ -242,6 +205,8 @@ def split_barrels(
         annotation (VoxelData): whole brain annotation
         barrel_positions (pd.DataFrame): x,y,z voxel positions
     """
+    assert "msg" in hierarchy, "Wrong hierarchy input. The AIBS 1.json file is expected."
+
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
     indices = region_map.find("SSp-bfd", attr="acronym", with_descendants=False)
@@ -252,5 +217,8 @@ def split_barrels(
     id_generator = create_id_generator(region_map)
     new_ids = layer_ids(id_generator, barrel_names, layers)
 
+    L.info("Editing hierarchy: barrel columns...")
     edit_hierarchy(hierarchy, new_ids, region_map, ssp_bfd_index, barrel_names)
+
+    L.info("Editing annotation: barrel columns...")
     edit_volume(annotation, region_map, barrel_positions, layers, new_ids)
