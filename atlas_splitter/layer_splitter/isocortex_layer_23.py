@@ -303,7 +303,10 @@ def split(
             "See, e.g., ``atlas-direction-vectors`` documentation and"
             "``atlas-direction-vectors interpolation --help`` in particular."
         )
-    L.info("Splitting the layer 2/3 volume using a thickness ratio of %f ...", thickness_ratio)
+    L.info(
+        "Splitting the layer 2/3 volume using a thickness ratio of %f ...",
+        thickness_ratio,
+    )
     # The voxels labeled with 1 (resp. 2) are the voxels whose cortical depth is at most
     # (resp. greater than) `thickness_ratio` times the full thickness of layer 2/3.
     # Note: direction vectors flow from the deepest layer to the shallowest layer.

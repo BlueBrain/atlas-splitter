@@ -104,16 +104,41 @@ def region_logical_and(positions, region, annotation, region_map):
     return layer_barrel
 
 
+def add_hierarchy_child(parent, id, name):
+    """Add barrel-child"""
+    new_child = copy.deepcopy(parent)
+    new_child["parent_structure_id"] = parent["id"]
+    new_child["acronym"] = parent["acronym"] + f"-{name}"
+    new_child["name"] = parent["name"] + f", {name} barrel"
+    new_child["id"] = id
+    new_child["st_level"] = parent["st_level"] + 1
+    new_child["graph_order"] = parent["graph_order"] + 1
+
+
 def edit_hierarchy(
     hierarchy: HierarchyDict,
     new_ids: Dict[int, Dict[str, int]],
     region_map: RegionMap,
     start_index: int,
     children_names,
+    layers,
 ) -> None:
     """Edit in place the hierarchy to include new children volumes of a given
     region. Implemented to integrated the barrel columns into [SSp-bfd]
     Barrel cortex in Primary Somatosensory cortex.
+
+    Note:
+        The following attributes of the created nodes are copies of the
+        parent attributes (see see http://api.brain-map.org/doc/Structure.html for some
+        definitions):
+        - atlas_id
+        - color_hex_triplet
+        - hemisphere_id (always set to 3 for the AIBS Mouse P56)
+        - graph_order (the structure order in a graph flattened via in order traversal)
+        - ontology_id (always set to 1 for the AIBS Mouse P56)
+        - st_level
+        No proper value of graph_order can be set for a new child. This is why it is left
+        unchanged.
 
     Args:
         hierarchy (HierarchyDict): brain regions hierarchy dict
@@ -140,9 +165,8 @@ def edit_hierarchy(
         new_child["id"] = new_ids[name]
         new_child["st_level"] = hierarchy_["st_level"] + 1
         new_child["graph_order"] = hierarchy_["graph_order"] + 1
-        new_subchildren = []
 
-        layers = list(new_ids[f"{name}_layers"].keys())
+        new_subchildren = []
         for layer in layers:
             new_subchild = copy.deepcopy(new_child)
             new_subchild["parent_structure_id"] = new_child["id"]
@@ -152,6 +176,19 @@ def edit_hierarchy(
             new_subchild["st_level"] = new_child["st_level"] + 1
             new_subchild["graph_order"] = new_child["graph_order"] + 1
             new_subchild["children"] = []
+            if layer == "2/3":
+                children23 = []
+                for sublayer in ["2", "3"]:
+                    layer23_subchild = copy.deepcopy(new_subchild)
+                    layer23_subchild["parent_structure_id"] = new_subchild["id"]
+                    layer23_subchild["acronym"] = new_child["acronym"] + f"-{sublayer}"
+                    layer23_subchild["name"] = new_child["name"] + f"layer {sublayer}"
+                    layer23_subchild["id"] = new_ids[name + "_layers"][sublayer]
+                    layer23_subchild["st_level"] = new_subchild["st_level"] + 1
+                    layer23_subchild["graph_order"] = new_subchild["graph_order"] + 1
+                    layer23_subchild["children"] = []
+                    children23.append(layer23_subchild)
+                new_subchild["children"] = children23
             new_subchildren.append(new_subchild)
 
         new_child["children"] = new_subchildren
@@ -191,7 +228,7 @@ def split_barrels(
     annotation: VoxelData,
     barrel_positions: pd.DataFrame,
 ):
-    """Introduce the barrel columns to the barrel cortex in the mouse atlas
+    """Introduce the barrel columns to the barrel cortex in  the mouse atlas
     annotation in place. Positions of the voxels need to be specified by a DataFrame.
     Each column is subdivided into layers.
 
@@ -213,12 +250,14 @@ def split_barrels(
     ssp_bfd_index = indices.pop()
     barrel_names = np.sort(barrel_positions.barrel.unique())
 
-    layers = ["1", "2", "3", "2/3", "4", "5", "6a", "6b"]
+    layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
     id_generator = create_id_generator(region_map)
     new_ids = layer_ids(id_generator, barrel_names, layers)
 
+    layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")
-    edit_hierarchy(hierarchy, new_ids, region_map, ssp_bfd_index, barrel_names)
+    edit_hierarchy(hierarchy, new_ids, region_map, ssp_bfd_index, barrel_names, layers)
 
+    layers = ["1", "2", "3" "4", "5", "6a", "6b"]
     L.info("Editing annotation: barrel columns...")
     edit_volume(annotation, region_map, barrel_positions, layers, new_ids)

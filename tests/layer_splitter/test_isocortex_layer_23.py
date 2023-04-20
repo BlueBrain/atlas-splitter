@@ -246,4 +246,9 @@ def test_split_isocortex_layer_23_exception():
     data["direction_vectors"][1, 25, 25] = [np.nan] * 3
 
     with pytest.raises(AtlasSplitterError, match=".*\\[NaN, NaN, NaN\\] direction vector.*"):
-        tested.split(allen_hierarchy, data["annotation"], data["direction_vectors"], data["ratio"])
+        tested.split(
+            allen_hierarchy,
+            data["annotation"],
+            data["direction_vectors"],
+            data["ratio"],
+        )
