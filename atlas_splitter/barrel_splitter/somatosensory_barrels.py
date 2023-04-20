@@ -104,15 +104,18 @@ def region_logical_and(positions, region, annotation, region_map):
     return layer_barrel
 
 
-def add_hierarchy_child(parent, id, name):
+def add_hierarchy_child(parent, id, name, acronym):
+    """"""
     """Add barrel-child"""
     new_child = copy.deepcopy(parent)
     new_child["parent_structure_id"] = parent["id"]
-    new_child["acronym"] = parent["acronym"] + f"-{name}"
-    new_child["name"] = parent["name"] + f", {name} barrel"
+    new_child["acronym"] = acronym
+    new_child["name"] = name
     new_child["id"] = id
     new_child["st_level"] = parent["st_level"] + 1
     new_child["graph_order"] = parent["graph_order"] + 1
+
+    return new_child
 
 
 def edit_hierarchy(
@@ -146,6 +149,7 @@ def edit_hierarchy(
         region_map (RegionMap):  map to navigate the brain regions hierarchy.
         start_index (int): index of the starting brain region (Isocortex)
         children_names (list): list of children volumes to be integrated
+        layers (list): list of layers to be integrated
     """
 
     hierarchy_levels = np.array(region_map.get(start_index, attr="acronym", with_ascendants=True))
@@ -158,34 +162,30 @@ def edit_hierarchy(
 
     new_children = hierarchy_["children"]
     for name in children_names:
-        new_child = copy.deepcopy(hierarchy_)
-        new_child["parent_structure_id"] = hierarchy_["id"]
-        new_child["acronym"] = hierarchy_["acronym"] + f"-{name}"
-        new_child["name"] = hierarchy_["name"] + f", {name} barrel"
-        new_child["id"] = new_ids[name]
-        new_child["st_level"] = hierarchy_["st_level"] + 1
-        new_child["graph_order"] = hierarchy_["graph_order"] + 1
-
+        new_child = add_hierarchy_child(
+            hierarchy_,
+            new_ids[name],
+            hierarchy_["name"] + f", {name} barrel",
+            hierarchy_["acronym"] + f"-{name}",
+        )
         new_subchildren = []
         for layer in layers:
-            new_subchild = copy.deepcopy(new_child)
-            new_subchild["parent_structure_id"] = new_child["id"]
-            new_subchild["acronym"] = new_child["acronym"] + f"-{layer}"
-            new_subchild["name"] = new_child["name"] + f"layer {layer}"
-            new_subchild["id"] = new_ids[name + "_layers"][layer]
-            new_subchild["st_level"] = new_child["st_level"] + 1
-            new_subchild["graph_order"] = new_child["graph_order"] + 1
+            new_subchild = add_hierarchy_child(
+                new_child,
+                new_ids[name + "_layers"][layer],
+                new_child["name"] + f"layer {layer}",
+                new_child["acronym"] + f"-{layer}",
+            )
             new_subchild["children"] = []
             if layer == "2/3":
                 children23 = []
                 for sublayer in ["2", "3"]:
-                    layer23_subchild = copy.deepcopy(new_subchild)
-                    layer23_subchild["parent_structure_id"] = new_subchild["id"]
-                    layer23_subchild["acronym"] = new_child["acronym"] + f"-{sublayer}"
-                    layer23_subchild["name"] = new_child["name"] + f"layer {sublayer}"
-                    layer23_subchild["id"] = new_ids[name + "_layers"][sublayer]
-                    layer23_subchild["st_level"] = new_subchild["st_level"] + 1
-                    layer23_subchild["graph_order"] = new_subchild["graph_order"] + 1
+                    layer23_subchild = add_hierarchy_child(
+                        new_subchild,
+                        new_ids[name + "_layers"][sublayer],
+                        new_child["name"] + f"layer {sublayer}",
+                        new_child["acronym"] + f"-{sublayer}",
+                    )
                     layer23_subchild["children"] = []
                     children23.append(layer23_subchild)
                 new_subchild["children"] = children23
@@ -258,6 +258,6 @@ def split_barrels(
     L.info("Editing hierarchy: barrel columns...")
     edit_hierarchy(hierarchy, new_ids, region_map, ssp_bfd_index, barrel_names, layers)
 
-    layers = ["1", "2", "3" "4", "5", "6a", "6b"]
+    layers = ["1", "2", "3", "4", "5", "6a", "6b"]
     L.info("Editing annotation: barrel columns...")
     edit_volume(annotation, region_map, barrel_positions, layers, new_ids)
