@@ -1,7 +1,9 @@
 """
 Algorithm introducing volumes of 33 barrel columns coming from segmentation of the 
 average brain atlas images from Allen institute. Barrel columns are introduced as children 
-to somatosensory area of barrel cortex and then subdivided into layers. 
+to somatosensory area of barrel cortex and then subdivided into layers. Each barrel is 
+subdivided into layers. To account for this being used after `layer-splitter` layer 2/3 is 
+split into 2 and 3.  
 
 * Introduction of barrels to the hierarchy.json
 * Introduction of the annotated volumes to the annotations.nrrd
@@ -12,36 +14,42 @@ in x,y,z coordinates.
 import copy
 import logging
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List, Union
 
 import numpy as np
 import pandas as pd
 from voxcell import RegionMap, VoxelData
 
-from atlas_splitter.utils import create_id_generator, get_isocortex_hierarchy
+from atlas_splitter.utils import _assert_is_leaf_node, create_id_generator, get_isocortex_hierarchy
 
 L = logging.getLogger(__name__)
 HierarchyDict = Dict[str, Any]
 
 
-def layer_ids(id_generator, names, layers):
+def layer_ids(
+    id_generator: Iterator[int], names: List[str], layers: List[str]
+) -> Dict[int, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
-        id_generator (Iterator[int]): generator of new ids
-        names (List[str]): names of the new regions
-        layers (List[str]): names of the new layer regions
+        id_generator: Iterator that generates new ids.
+        names: A list of names of the new regions.
+        layers: A list of names of the new layer regions.
 
     Returns:
-        Dict[int, Dict[str, int]]: dictionary of ids for the new regions
+        A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
-    new_ids: Dict[int, Dict[str, int]] = defaultdict(dict)
+    new_ids: Dict[int, Dict[str, int]] = {}
 
     for name in names:
-        new_ids[name] = next(id_generator)
-        new_ids[name + "_layers"] = {}
+        region_id = next(id_generator)
+        new_ids[region_id] = {}
+        new_ids[region_id]["name"] = name
+        new_ids[region_id]["layers"] = {}
+
         for layer_name in layers:
-            new_ids[name + "_layers"][layer_name] = next(id_generator)
+            layer_id = next(id_generator)
+            new_ids[region_id]["layers"][layer_name] = layer_id
 
     return new_ids
 
@@ -62,18 +70,18 @@ def get_hierarchy_by_acronym(hierarchy, acronym):
             return hierarchy["children"][index]
 
 
-def positions_to_mask(positions, annotation):
-    """Change x,y,z position coordinates into binary mask in 3D BoolArray
+def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarray:
+    """Change x, y, z position coordinates into binary mask in 3D boolean array.
 
     Args:
-        positions (np.array): 2D : x,y,z positions
-        annotation (VoxelData): orientation field of the atlas
+        positions: A numpy array of shape (n, 3) representing the x, y, z positions.
+        annotation: A VoxelData object representing the orientation field of the atlas.
 
     Returns:
-        BoolArray: mask of the region described by the positions
+        A numpy array of shape annotation.shape with True values at the indices corresponding to the input positions.
     """
 
-    mask = np.zeros(annotation.shape)
+    mask = np.zeros(annotation.shape, dtype=bool)
     indices = annotation.positions_to_indices(positions)
 
     for indx in indices:
@@ -82,17 +90,25 @@ def positions_to_mask(positions, annotation):
     return mask
 
 
-def region_logical_and(positions, region, annotation, region_map):
-    """Logical and of the region mask and the positions mask (used to merge columns and layers)
+def region_logical_and(
+    positions: np.array, region: str, annotation: VoxelData, region_map: RegionMap
+) -> np.ndarray[bool]:
+    """Perform a logical AND operation between the binary mask of a region
+    defined by a given set of positions and the binary mask of the region
+    specified by the region name. Function used to merge barrel  columns and layers.
 
     Args:
-        positions (np.array): 2D : x,y,z positions
-        region (str): name of the region
-        annotation (VoxelData): orientation field of the atlas
-        region_map (RegionMap): map to navigate the brain regions hierarchy.
+        positions (np.array): A 2D numpy array of shape (N, 3) containing
+            x, y, z coordinates of positions.
+        region (str): The name of the region to use in the logical AND operation.
+        annotation (VoxelData): A VoxelData object representing the orientation
+            field of the atlas.
+        region_map (RegionMap): A RegionMap object representing the map to navigate
+            the brain regions hierarchy.
 
     Returns:
-        BoolArray: mask of the region described by the positions
+        np.ndarray[bool]: A 3D numpy array of the same shape as `annotation.data` containing
+        the resulting binary mask after performing the logical AND operation.
     """
     mask = positions_to_mask(positions, annotation).astype(bool)
     indices = np.isin(
@@ -104,9 +120,21 @@ def region_logical_and(positions, region, annotation, region_map):
     return layer_barrel
 
 
-def add_hierarchy_child(parent, id, name, acronym):
-    """"""
-    """Add barrel-child"""
+def add_hierarchy_child(
+    parent: Dict[str, Any], id: Union[str, int], name: str, acronym: str
+) -> Dict[str, Any]:
+    """
+    Add a new child to a hierarchical structure.
+
+    Args:
+        parent: The parent structure to which the child is being added.
+        id: The unique identifier for the child.
+        name: The name of the child.
+        acronym: The acronym for the child.
+
+    Returns:
+        A new copy of the parent structure with the child added to it.
+    """
     new_child = copy.deepcopy(parent)
     new_child["parent_structure_id"] = parent["id"]
     new_child["acronym"] = acronym
@@ -114,7 +142,6 @@ def add_hierarchy_child(parent, id, name, acronym):
     new_child["id"] = id
     new_child["st_level"] = parent["st_level"] + 1
     new_child["graph_order"] = parent["graph_order"] + 1
-
     return new_child
 
 
@@ -123,8 +150,8 @@ def edit_hierarchy(
     new_ids: Dict[int, Dict[str, int]],
     region_map: RegionMap,
     start_index: int,
-    children_names,
-    layers,
+    children_names: List[str],
+    layers: List[str],
 ) -> None:
     """Edit in place the hierarchy to include new children volumes of a given
     region. Implemented to integrated the barrel columns into [SSp-bfd]
@@ -162,37 +189,48 @@ def edit_hierarchy(
 
     new_children = hierarchy_["children"]
     for name in children_names:
-        new_child = add_hierarchy_child(
+        new_barrel = add_hierarchy_child(
             hierarchy_,
             new_ids[name],
             hierarchy_["name"] + f", {name} barrel",
             hierarchy_["acronym"] + f"-{name}",
         )
-        new_subchildren = []
+        assert new_barrel["acronym"].endswith(name)
+
+        new_barrelchildren = []
         for layer in layers:
-            new_subchild = add_hierarchy_child(
-                new_child,
+            new_barrel_layer = add_hierarchy_child(
+                new_barrel,
                 new_ids[name + "_layers"][layer],
-                new_child["name"] + f"layer {layer}",
-                new_child["acronym"] + f"-{layer}",
+                new_barrel["name"] + f" layer {layer}",
+                new_barrel["acronym"] + f"-{layer}",
             )
-            new_subchild["children"] = []
+            assert new_barrel_layer["acronym"].endswith(layer)
+
+            new_barrel_layer["children"] = []
             if layer == "2/3":
                 children23 = []
                 for sublayer in ["2", "3"]:
-                    layer23_subchild = add_hierarchy_child(
-                        new_subchild,
+                    layer23_child = add_hierarchy_child(
+                        new_barrel_layer,
                         new_ids[name + "_layers"][sublayer],
-                        new_child["name"] + f"layer {sublayer}",
-                        new_child["acronym"] + f"-{sublayer}",
+                        new_barrel["name"] + f" layer {sublayer}",
+                        new_barrel["acronym"] + f"-{sublayer}",
                     )
-                    layer23_subchild["children"] = []
-                    children23.append(layer23_subchild)
-                new_subchild["children"] = children23
-            new_subchildren.append(new_subchild)
+                    layer23_child["children"] = []
+                    assert layer23_child["acronym"].endswith(sublayer)
+                    _assert_is_leaf_node(layer23_child)
 
-        new_child["children"] = new_subchildren
-        new_children.append(new_child)
+                    children23.append(layer23_child)
+
+                new_barrel_layer["children"] = children23
+            else:
+                _assert_is_leaf_node(new_barrel_layer)
+
+            new_barrelchildren.append(new_barrel_layer)
+
+        new_barrel["children"] = new_barrelchildren
+        new_children.append(new_barrel)
 
     hierarchy_["children"] = new_children
 
@@ -203,7 +241,7 @@ def edit_volume(
     barrel_positions: pd.DataFrame,
     layers: List[str],
     new_ids: Dict[str, int],
-):
+) -> None:
     """Edit in place the volume of the barrel cortex to include the barrel columns as
     separate ids. Implemented to integrated the barrel columns into [SSp-bfd] Barrel
     cortex in Primary Somatosensory cortex. The columns are also subdivided into layers.
