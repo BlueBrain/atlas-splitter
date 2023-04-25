@@ -121,10 +121,10 @@ def split_isocortex_layer_23(  # pylint: disable=too-many-arguments
     set_verbose(L, verbose)
 
     L.info("Loading files ...")
-    annotation = voxcell.VoxelData.load_nrrd(annotation_path)
+    annotation = VoxelData.load_nrrd(annotation_path)
     with open(hierarchy_path, "r", encoding="utf-8") as h_file:
         hierarchy = json.load(h_file)
-    direction_vectors = voxcell.VoxelData.load_nrrd(direction_vectors_path)
+    direction_vectors = VoxelData.load_nrrd(direction_vectors_path)
 
     # Splits and updates in place hierarchy and annotations
     L.info("Splitting layer 2/3 in layer 2 and layer 3 ...")
