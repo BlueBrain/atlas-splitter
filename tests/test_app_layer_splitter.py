@@ -5,7 +5,7 @@ from atlas_commons.app_utils import assert_properties
 from click.testing import CliRunner
 from voxcell import RegionMap, VoxelData  # type: ignore
 
-import atlas_splitter.app.cli as tested
+import atlas_splitter.app as tested
 from tests.layer_splitter.utils import LAYER_23_IDS, get_splitting_input_data
 
 TEST_PATH = Path(__file__).parent
@@ -13,9 +13,9 @@ TEST_PATH = Path(__file__).parent
 
 def _get_result(runner):
     return runner.invoke(
-        tested.split_isocortex_layer_23,
+        tested.cli,
         [
-            # "split-isocortex-layer-23",
+            "split-isocortex-layer-23",
             "--annotation-path",
             "annotation.nrrd",
             "--hierarchy-path",
