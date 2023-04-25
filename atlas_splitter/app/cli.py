@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 class NaturalOrderGroup(click.Group):
     """Click group preserving the order of commands."""
 
-    def list_commands(self, ctx: click.Context) -> list[str]:
+    def list_commands(self, ctx: click.Context):
         """Return the list of possible commands."""
         return list(self.commands)
 
