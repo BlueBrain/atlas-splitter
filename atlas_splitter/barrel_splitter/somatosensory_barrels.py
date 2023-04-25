@@ -39,17 +39,14 @@ def layer_ids(
     Returns:
         A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
-    new_ids: Dict[int, Dict[str, int]] = {}
+    new_ids: Dict[int, Dict[str, int]] = defaultdict(dict)
 
     for name in names:
-        region_id = next(id_generator)
-        new_ids[region_id] = {}
-        new_ids[region_id]["name"] = name
-        new_ids[region_id]["layers"] = {}
+        new_ids[name] = next(id_generator)
+        new_ids[name + "_layers"] = {}
 
         for layer_name in layers:
-            layer_id = next(id_generator)
-            new_ids[region_id]["layers"][layer_name] = layer_id
+            new_ids[name + "_layers"][layer_name] = next(id_generator)
 
     return new_ids
 
@@ -90,9 +87,7 @@ def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarra
     return mask
 
 
-def region_logical_and(
-    positions: np.array, region: str, annotation: VoxelData, region_map: RegionMap
-) -> np.ndarray[bool]:
+def region_logical_and(positions: np.array, annotation: VoxelData, indices: List) -> np.ndarray:
     """Perform a logical AND operation between the binary mask of a region
     defined by a given set of positions and the binary mask of the region
     specified by the region name. Function used to merge barrel  columns and layers.
@@ -100,22 +95,20 @@ def region_logical_and(
     Args:
         positions (np.array): A 2D numpy array of shape (N, 3) containing
             x, y, z coordinates of positions.
-        region (str): The name of the region to use in the logical AND operation.
         annotation (VoxelData): A VoxelData object representing the orientation
             field of the atlas.
-        region_map (RegionMap): A RegionMap object representing the map to navigate
-            the brain regions hierarchy.
+        indices (List): list of indices to be used for region annotation
 
     Returns:
-        np.ndarray[bool]: A 3D numpy array of the same shape as `annotation.data` containing
-        the resulting binary mask after performing the logical AND operation.
+        np.ndarray: A 3D numpy array of the same shape as `annotation.data` containing
+        the resulting binary mask after performing the logical AND operation (bool values).
     """
     mask = positions_to_mask(positions, annotation).astype(bool)
-    indices = np.isin(
+    region_mask = np.isin(
         annotation.raw,
-        list(region_map.find(region, attr="acronym", with_descendants=True)),
+        indices,
     ).astype(bool)
-    layer_barrel = np.logical_and(indices, mask).astype(bool)
+    layer_barrel = np.logical_and(region_mask, mask).astype(bool)
 
     return layer_barrel
 
@@ -256,7 +249,8 @@ def edit_volume(
         for layer in layers:
             region = f"SSp-bfd{layer}"
             new_id = new_ids[name + "_layers"][layer]
-            layer_barrel = region_logical_and(positions, region, annotation, region_map)
+            region_indices = list(region_map.find(region, attr="acronym", with_descendants=True))
+            layer_barrel = region_logical_and(positions, annotation, region_indices)
 
             annotation.raw[layer_barrel] = new_id
 
@@ -291,6 +285,7 @@ def split_barrels(
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
     id_generator = create_id_generator(region_map)
     new_ids = layer_ids(id_generator, barrel_names, layers)
+    print(new_ids)
 
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")

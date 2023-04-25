@@ -44,18 +44,19 @@ new_ids = {
 
 
 def test_layer_ids():
-    id_generator = iter(range(100))
+    id_generator = iter(range(1, 10))
     names = ["region1", "region2", "region3"]
     layers = ["layer1", "layer2"]
-
-    expected_result = {
-        0: {"name": "region1", "layers": {"layer1": 1, "layer2": 2}},
-        3: {"name": "region2", "layers": {"layer1": 4, "layer2": 5}},
-        6: {"name": "region3", "layers": {"layer1": 7, "layer2": 8}},
-    }
-
     result = tested.layer_ids(id_generator, names, layers)
-    assert result == expected_result
+    expected = {
+        "region1": 1,
+        "region1_layers": {"layer1": 2, "layer2": 3},
+        "region2": 4,
+        "region2_layers": {"layer1": 5, "layer2": 6},
+        "region3": 7,
+        "region3_layers": {"layer1": 8, "layer2": 9},
+    }
+    assert result == expected
 
 
 def test_positions_to_mask():
@@ -108,36 +109,64 @@ def test_add_hierarchy_child(parent_structure: Dict[str, Any]):
     assert parent_structure["graph_order"] == 0
     assert len(parent_structure["children"]) == 0
 
-    # def test_region_logical_and():
-    #     positions = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    #     annotation = VoxelData(...)
-    #     region_map = RegionMap(...)
-    #     result = tested.region_logical_and(positions, region, annotation, region_map)
-    #     assert result.shape == annotation.data.shape
-    #     assert np.sum(result) > 0
-
-    positions_ = positions[(positions.barrel == "C2")][list("xyz")].values
-    annotation_test = VoxelData(raw.copy(), (1.0, 1.0, 1.0))
-    region_map = RegionMap.from_dict(hierarchy_test["msg"][0])
-
-    mask = region_logical_and(positions_, "SSp-bfd4", annotation_test, region_map)
-
 
 def test_region_logical_and():
-    hierarchy = get_barrel_cortex_excerpt_edited()
-    annotation_test, positions = get_barrel_splitter_input_data()
+    hierarchy = get_barrel_cortex_excerpt()
+
+    raw = np.zeros((3, 57, 57), dtype=int)
+    raw[1, 20:30, :] = 1047
+
+    positions_barrel = pd.DataFrame(
+        {
+            "x": np.ones(57),
+            "y": np.arange(0, 57),
+            "z": np.ones(57) * 10,
+        }
+    )
+
+    annotation = VoxelData(raw.copy(), (1.0, 1.0, 1.0))
+    annotation = VoxelData(raw.copy(), (1.0, 1.0, 1.0))
+    test = np.array(
+        np.where(tested.region_logical_and(positions_barrel.values, annotation, [1047]) == True)
+    )
+
+    expected = np.array([np.ones(10), np.arange(20, 30), np.ones(10) * 10])
+    assert np.all(test == expected)
 
 
 def test_edit_hierarchy():
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     hierarchy = get_barrel_cortex_excerpt()
+    expected_hierarchy = get_barrel_cortex_excerpt_edited()
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
     tested.edit_hierarchy(hierarchy, new_ids, region_map, 329, ["C1", "C2"], layers)
-    expected_hierarchy = get_barrel_cortex_excerpt_edited()
+    region_map_test = RegionMap.from_dict(hierarchy["msg"][0])
 
     assert hierarchy == expected_hierarchy
-    ## assertions of children
+
+    bc_hierarchy = hierarchy["msg"][0]["children"][0]
+    assert np.size(bc_hierarchy["children"]) == 8  # barrel cortex children
+    assert np.size(bc_hierarchy["children"][-1]["children"]) == 6  # barrel children
+    assert (
+        np.size(bc_hierarchy["children"][-1]["children"][1]["children"]) == 2
+    )  # barrel layer 2/3 children
+
+    assert region_map_test.get(2001, attr="acronym", with_ascendants=True) == [
+        "SSp-bfd-C2-1",
+        "SSp-bfd-C2",
+        "SSp-bfd",
+        "Isocortex",
+    ]
+
+    assert list(region_map_test.find("@.*3[ab]?$", attr="acronym")) == [
+        201,  # SSp-bfd2/3
+        1999,  # SSp-bfd3
+        2003,  # SSp-bfd-C2-3
+        2004,  # SSp-bfd-C2-2/3
+        2013,  # SSp-bfd-C1-3
+        2014,  # SSp-bfd-C1-2/3
+    ]
 
 
 def test_edit_volume():
@@ -147,6 +176,31 @@ def test_edit_volume():
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
     tested.edit_volume(annotation_test, region_map, positions, layers, new_ids)
+    test = annotation_test.raw
+    assert test.shape == (3, 57, 57)
+    assert np.all(test[0, :, :] == 0)
+    assert np.all(test[2, :, :] == 0)
 
-    ## assert if positions from df changed in the volume to new index
-    ## assert index belonging to hierarchy?
+    assert np.all(test[1, 0:5, 10] == 2001)  # C2-layer 1
+    assert np.all(test[1, 5:10, 10] == 2002)  # C2-layer 2
+    assert np.all(test[1, 10:20, 10] == 2003)  # C2-layer 3
+    assert np.all(test[1, 20:30, 10] == 2005)  # C2-layer 4
+    assert np.all(test[1, 30:40, 10] == 2006)  # C2-layer 5
+    assert np.all(test[1, 40:50, 10] == 2007)  # C2-layer 6a
+    assert np.all(test[1, 50:, 10] == 2008)  # C2-layer 6b
+
+    assert np.all(test[1, 0:5, 20] == 2011)  # C1-layer 1
+    assert np.all(test[1, 5:10, 20] == 2012)  # C1-layer 2
+    assert np.all(test[1, 10:20, 20] == 2013)  # C1-layer 3
+    assert np.all(test[1, 20:30, 20] == 2015)  # C1-layer 4
+    assert np.all(test[1, 30:40, 20] == 2016)  # C1-layer 5
+    assert np.all(test[1, 40:50, 20] == 2017)  # C1-layer 6a
+    assert np.all(test[1, 50:, 20] == 2018)  # C1-layer 6b
+
+    assert np.all(test[1, 0:5, 0:10] == 981)  # non-barrel layer 1
+    assert np.all(test[1, 5:10, 0:10] == 1998)  # non-barrel layer 2
+    assert np.all(test[1, 10:20, 0:10] == 1999)  # non-barrel layer 3
+    assert np.all(test[1, 20:30, 0:10] == 1047)  # non-barrel layer 4
+    assert np.all(test[1, 30:40, 0:10] == 1070)  # non-barrel layer 5
+    assert np.all(test[1, 40:50, 0:10] == 1038)  # non-barrel layer 6a
+    assert np.all(test[1, 50:, 0:10] == 1062)  # non-barrel layer 6b
