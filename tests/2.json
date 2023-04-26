@@ -1,0 +1,119 @@
+{
+    "success": true,
+    "id": 0,
+    "start_row": 0,
+    "num_rows": 1,
+    "total_rows": 1,
+    "msg": [
+        {
+            "id": 997,
+            "atlas_id": -1,
+            "ontology_id": 1,
+            "acronym": "root",
+            "name": "root",
+            "color_hex_triplet": "FFFFFF",
+            "graph_order": 0,
+            "st_level": 0,
+            "hemisphere_id": 3,
+            "parent_structure_id": null,
+            "children": [
+        {
+            "id": 315,
+            "acronym": "Isocortex",
+            "name": "Isocortex",
+            "children": [
+                {
+                    "id": 329,
+                    "acronym": "SSp-bfd",
+                    "name": "Primary somatosensory area, barrel field",
+                    "st_level": 9,
+                    "parent_structure_id": 322,
+                    "graph_order": 51,
+                    "children": [
+                        {
+                            "id": 981,
+                            "acronym": "SSp-bfd1",
+                            "name": "Primary somatosensory area, barrel field, layer 1",
+                            "graph_order": 52,
+                            "st_level": 11,
+                            "parent_structure_id": 329,
+                            "children": []
+                        },
+                        {
+                            "id": 201,
+                            "acronym": "SSp-bfd2/3",
+                            "name": "Primary somatosensory area, barrel field, layer 2/3",
+                            "graph_order": 53,
+                            "st_level": 11,
+                            "parent_structure_id": 329,
+                            "children": [
+                                {
+                                    "id": 1998,
+                                    "ontology_id": 1,
+                                    "acronym": "SSp-bfd2",
+                                    "name": "Primary somatosensory area, barrel field, layer 2",
+                                    "graph_order": 53,
+                                    "st_level": 11,
+                                    "hemisphere_id": 3,
+                                    "parent_structure_id": 201,
+                                    "children": [],
+                                    "layers": ["2"]
+                                },
+                                {
+                                    "id": 1999,
+                                    "ontology_id": 1,
+                                    "acronym": "SSp-bfd3",
+                                    "name": "Primary somatosensory area, barrel field, layer 3",
+                                    "graph_order": 53,
+                                    "st_level": 11,
+                                    "hemisphere_id": 3,
+                                    "parent_structure_id": 201,
+                                    "children": [],
+                                    "layers": ["3"]
+                                }
+                            ]
+                        },
+                        {
+                            "id": 1047,
+                            "acronym": "SSp-bfd4",
+                            "name": "Primary somatosensory area, barrel field, layer 4",
+                            "graph_order": 54,
+                            "st_level": 11,
+                            "parent_structure_id": 329,
+                            "children": []
+                        },
+                        {
+                            "id": 1070,
+                            "acronym": "SSp-bfd5",
+                            "name": "Primary somatosensory area, barrel field, layer|5",
+                            "graph_order": 55,
+                            "st_level": 11,
+                            "parent_structure_id": 329,
+                            "children": []
+                        },
+                        {
+                            "id": 1038,
+                            "acronym": "SSp-bfd6a",
+                            "name": "Primary somatosensory area, barrel field, layer 6a",
+                            "graph_order": 56,
+                            "st_level": 11,
+                            "parent_structure_id": 329,
+                            "children": []
+                        },
+                        {
+                            "id": 1062,
+                            "acronym": "SSp-bfd6b",
+                            "name": "Primary somatosensory area, barrel field, layer 6b",
+                            "graph_order": 57,
+                            "st_level": 11,
+                            "parent_structure_id": 329,
+                            "children": []
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+]
+}

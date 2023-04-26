@@ -43,9 +43,7 @@ def test_split_isocortex_layer_23():
     with runner.isolated_filesystem():
         _create_files()
         result = _get_result(runner)
-        print("RESULTS:", result)
         assert result.exit_code == 0, str(result.output)
-        # assert False
 
         input_annotation = VoxelData.load_nrrd("annotation.nrrd")
         output_annotation = VoxelData.load_nrrd("output_annotation.nrrd")
