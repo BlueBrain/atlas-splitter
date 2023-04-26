@@ -74,5 +74,4 @@ def test_split_barrels():
 
         barrel_cortex_ids = output_region_map.find("SSp-bfd", attr="acronym", with_descendants=True)
 
-        print(barrel_cortex_ids)
         assert barrel_cortex_ids == set(output_bfd)
