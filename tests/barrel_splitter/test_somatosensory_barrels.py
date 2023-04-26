@@ -18,8 +18,8 @@ from tests.barrel_splitter.utils import (
 TEST_PATH = Path(__file__).parent
 
 new_ids = {
-    "C2": 2000,
-    "C2_layers": {
+    "C2": {
+        "C2": 2000,
         "1": 2001,
         "2/3": 2004,
         "2": 2002,
@@ -29,8 +29,8 @@ new_ids = {
         "6a": 2007,
         "6b": 2008,
     },
-    "C1": 2010,
-    "C1_layers": {
+    "C1": {
+        "C1": 2010,
         "1": 2011,
         "2/3": 2014,
         "2": 2012,
@@ -49,12 +49,9 @@ def test_layer_ids():
     layers = ["layer1", "layer2"]
     result = tested.layer_ids(id_generator, names, layers)
     expected = {
-        "region1": 1,
-        "region1_layers": {"layer1": 2, "layer2": 3},
-        "region2": 4,
-        "region2_layers": {"layer1": 5, "layer2": 6},
-        "region3": 7,
-        "region3_layers": {"layer1": 8, "layer2": 9},
+        "region1": {"region1": 1, "layer1": 2, "layer2": 3},
+        "region2": {"region2": 4, "layer1": 5, "layer2": 6},
+        "region3": {"region3": 7, "layer1": 8, "layer2": 9},
     }
     assert result == expected
 

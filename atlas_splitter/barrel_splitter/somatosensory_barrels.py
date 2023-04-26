@@ -28,7 +28,7 @@ HierarchyDict = Dict[str, Any]
 
 def layer_ids(
     id_generator: Iterator[int], names: List[str], layers: List[str]
-) -> Dict[int, Dict[str, int]]:
+) -> Dict[str, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
@@ -42,16 +42,16 @@ def layer_ids(
     new_ids: Dict[int, Dict[str, int]] = defaultdict(dict)
 
     for name in names:
-        new_ids[name] = next(id_generator)
-        new_ids[name + "_layers"] = {}
+        new_ids[name] = {}
+        new_ids[name][name] = next(id_generator)
 
         for layer_name in layers:
-            new_ids[name + "_layers"][layer_name] = next(id_generator)
+            new_ids[name][layer_name] = next(id_generator)
 
     return new_ids
 
 
-def get_hierarchy_by_acronym(hierarchy, acronym):
+def get_hierarchy_by_acronym(hierarchy: HierarchyDict, acronym: str):
     """Find and return child with a matching acronym from the next level
     of the hierarchy.
 
@@ -140,7 +140,7 @@ def add_hierarchy_child(
 
 def edit_hierarchy(
     hierarchy: HierarchyDict,
-    new_ids: Dict[int, Dict[str, int]],
+    new_ids: Dict[str, Dict[str, int]],
     region_map: RegionMap,
     start_index: int,
     children_names: List[str],
@@ -184,7 +184,7 @@ def edit_hierarchy(
     for name in children_names:
         new_barrel = add_hierarchy_child(
             hierarchy_,
-            new_ids[name],
+            new_ids[name][name],
             hierarchy_["name"] + f", {name} barrel",
             hierarchy_["acronym"] + f"-{name}",
         )
@@ -194,7 +194,7 @@ def edit_hierarchy(
         for layer in layers:
             new_barrel_layer = add_hierarchy_child(
                 new_barrel,
-                new_ids[name + "_layers"][layer],
+                new_ids[name][layer],
                 new_barrel["name"] + f" layer {layer}",
                 new_barrel["acronym"] + f"-{layer}",
             )
@@ -206,7 +206,7 @@ def edit_hierarchy(
                 for sublayer in ["2", "3"]:
                     layer23_child = add_hierarchy_child(
                         new_barrel_layer,
-                        new_ids[name + "_layers"][sublayer],
+                        new_ids[name][sublayer],
                         new_barrel["name"] + f" layer {sublayer}",
                         new_barrel["acronym"] + f"-{sublayer}",
                     )
@@ -233,7 +233,7 @@ def edit_volume(
     region_map: RegionMap,
     barrel_positions: pd.DataFrame,
     layers: List[str],
-    new_ids: Dict[str, int],
+    new_ids: Dict[str, Dict[str, int]],
 ) -> None:
     """Edit in place the volume of the barrel cortex to include the barrel columns as
     separate ids. Implemented to integrated the barrel columns into [SSp-bfd] Barrel
@@ -242,13 +242,13 @@ def edit_volume(
     Args:
         volume (NDArray): whole brain annotated volume.
         barrel_positions (pd.DataFrame): x,y,z voxel positions
-        new_ids (Dict[str, int]): set of new ids
+        new_ids (Dict[int, Dict[str, int]]): set of new ids
     """
     for name in barrel_positions.barrel.unique():
         positions = barrel_positions[barrel_positions.barrel == name][["x", "y", "z"]].values
         for layer in layers:
             region = f"SSp-bfd{layer}"
-            new_id = new_ids[name + "_layers"][layer]
+            new_id = new_ids[name][layer]
             region_indices = list(region_map.find(region, attr="acronym", with_descendants=True))
             layer_barrel = region_logical_and(positions, annotation, region_indices)
 
@@ -285,7 +285,6 @@ def split_barrels(
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
     id_generator = create_id_generator(region_map)
     new_ids = layer_ids(id_generator, barrel_names, layers)
-    print(new_ids)
 
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")
