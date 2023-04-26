@@ -78,13 +78,10 @@ def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarra
         A numpy array of shape annotation.shape with True values at the indices
         corresponding to the input positions.
     """
-
     mask = np.zeros(annotation.shape, dtype=bool)
     indices = annotation.positions_to_indices(positions)
-
     for indx in indices:
         mask[indx[0], indx[1], indx[2]] = True
-
     return mask
 
 
