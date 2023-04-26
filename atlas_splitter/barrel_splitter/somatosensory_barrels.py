@@ -39,7 +39,7 @@ def layer_ids(
     Returns:
         A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
-    new_ids: Dict[int, Dict[str, int]] = defaultdict(dict)
+    new_ids: Dict[str, Dict[str, int]] = defaultdict(dict)
 
     for name in names:
         new_ids[name] = {}
@@ -75,7 +75,8 @@ def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarra
         annotation: A VoxelData object representing the orientation field of the atlas.
 
     Returns:
-        A numpy array of shape annotation.shape with True values at the indices corresponding to the input positions.
+        A numpy array of shape annotation.shape with True values at the indices
+        corresponding to the input positions.
     """
 
     mask = np.zeros(annotation.shape, dtype=bool)
@@ -87,7 +88,7 @@ def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarra
     return mask
 
 
-def region_logical_and(positions: np.array, annotation: VoxelData, indices: List) -> np.ndarray:
+def region_logical_and(positions: np.ndarray, annotation: VoxelData, indices: List) -> np.ndarray:
     """Perform a logical AND operation between the binary mask of a region
     defined by a given set of positions and the binary mask of the region
     specified by the region name. Function used to merge barrel  columns and layers.
@@ -280,7 +281,7 @@ def split_barrels(
 
     indices = region_map.find("SSp-bfd", attr="acronym", with_descendants=False)
     ssp_bfd_index = indices.pop()
-    barrel_names = np.sort(barrel_positions.barrel.unique())
+    barrel_names = list(np.sort(barrel_positions.barrel.unique()))
 
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
     id_generator = create_id_generator(region_map)
