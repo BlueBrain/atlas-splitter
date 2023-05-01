@@ -48,7 +48,7 @@ def cli():
 @click.option("--output-hierarchy-path", required=True, help="Path of the json file to write")
 @click.option("--output-annotation-path", required=True, help="Path of the nrrd file to write")
 @log_args(L)
-def split_barrel_columns(
+def split_barrel_columns(  # pylint: disable=too-many-arguments
     verbose,
     annotation_path,
     hierarchy_path,

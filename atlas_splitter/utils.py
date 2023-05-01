@@ -1,5 +1,6 @@
-from itertools import count
-from typing import Any, Dict, Iterator, List
+"""Utilities for splitting atlases."""
+import itertools as it
+from typing import Any, Dict, Iterator
 
 from voxcell import RegionMap
 
@@ -42,7 +43,7 @@ def create_id_generator(region_map: RegionMap) -> Iterator[int]:
         iterator providing the next id.
     """
     last = max(region_map.find("root", attr="acronym", with_descendants=True))
-    return count(start=last + 1)
+    return it.count(start=last + 1)
 
 
 def _assert_is_leaf_node(node) -> None:

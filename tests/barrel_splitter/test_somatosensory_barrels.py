@@ -1,9 +1,7 @@
-import json
 from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
-import numpy.testing as npt
 import pandas as pd
 import pytest
 from voxcell import RegionMap, VoxelData
@@ -108,8 +106,6 @@ def test_add_hierarchy_child(parent_structure: Dict[str, Any]):
 
 
 def test_region_logical_and():
-    hierarchy = get_barrel_cortex_excerpt()
-
     raw = np.zeros((3, 57, 57), dtype=int)
     raw[1, 20:30, :] = 1047
 
@@ -124,7 +120,7 @@ def test_region_logical_and():
     annotation = VoxelData(raw.copy(), (1.0, 1.0, 1.0))
     annotation = VoxelData(raw.copy(), (1.0, 1.0, 1.0))
     test = np.array(
-        np.where(tested.region_logical_and(positions_barrel.values, annotation, [1047]) == True)
+        np.where(tested.region_logical_and(positions_barrel.values, annotation, [1047]))
     )
 
     expected = np.array([np.ones(10), np.arange(20, 30), np.ones(10) * 10])

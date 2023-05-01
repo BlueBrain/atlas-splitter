@@ -1,9 +1,9 @@
 """
-Algorithm introducing volumes of 33 barrel columns coming from segmentation of the 
-average brain atlas images from Allen institute. Barrel columns are introduced as children 
-to somatosensory area of barrel cortex and then subdivided into layers. Each barrel is 
-subdivided into layers. To account for this being used after `layer-splitter` layer 2/3 is 
-split into 2 and 3.  
+Algorithm introducing volumes of 33 barrel columns coming from segmentation of the
+average brain atlas images from Allen institute. Barrel columns are introduced as children
+to somatosensory area of barrel cortex and then subdivided into layers. Each barrel is
+subdivided into layers. To account for this being used after `layer-splitter` layer 2/3 is
+split into 2 and 3.
 
 * Introduction of barrels to the hierarchy.json
 * Introduction of the annotated volumes to the annotations.nrrd
@@ -14,7 +14,7 @@ in x,y,z coordinates.
 import copy
 import logging
 from collections import defaultdict
-from typing import Any, Dict, Iterator, List, Union
+from typing import Any, Dict, Iterator, List
 
 import numpy as np
 import pandas as pd
@@ -66,6 +66,8 @@ def get_hierarchy_by_acronym(hierarchy: HierarchyDict, acronym: str):
         if child["acronym"] == acronym:
             return hierarchy["children"][index]
 
+    return None
+
 
 def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarray:
     """Change x, y, z position coordinates into binary mask in 3D boolean array.
@@ -112,7 +114,7 @@ def region_logical_and(positions: np.ndarray, annotation: VoxelData, indices: Li
 
 
 def add_hierarchy_child(
-    parent: Dict[str, Any], id: Union[str, int], name: str, acronym: str
+    parent: Dict[str, Any], id_: int, name: str, acronym: str
 ) -> Dict[str, Any]:
     """
     Add a new child to a hierarchical structure.
@@ -130,13 +132,13 @@ def add_hierarchy_child(
     new_child["parent_structure_id"] = parent["id"]
     new_child["acronym"] = acronym
     new_child["name"] = name
-    new_child["id"] = id
+    new_child["id"] = id_
     new_child["st_level"] = parent["st_level"] + 1
     new_child["graph_order"] = parent["graph_order"] + 1
     return new_child
 
 
-def edit_hierarchy(
+def edit_hierarchy(  # pylint: disable=too-many-arguments
     hierarchy: HierarchyDict,
     new_ids: Dict[str, Dict[str, int]],
     region_map: RegionMap,
@@ -164,12 +166,11 @@ def edit_hierarchy(
     Args:
         hierarchy (HierarchyDict): brain regions hierarchy dict
         new_ids (Dict[int, Dict[str, int]]): set of new ids
-        region_map (RegionMap):  map to navigate the brain regions hierarchy.
         start_index (int): index of the starting brain region (Isocortex)
         children_names (list): list of children volumes to be integrated
         layers (list): list of layers to be integrated
     """
-
+    # pylint: disable=too-many-locals
     hierarchy_levels = np.array(region_map.get(start_index, attr="acronym", with_ascendants=True))
     iso_index = np.where(hierarchy_levels == "Isocortex")[0][0]
     hierarchy_levels = hierarchy_levels[:iso_index]

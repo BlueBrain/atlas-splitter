@@ -23,7 +23,6 @@ from __future__ import annotations
 import copy
 import logging
 from collections import defaultdict
-from itertools import count
 from typing import Any, Dict, Iterator, Set
 
 import numpy as np
