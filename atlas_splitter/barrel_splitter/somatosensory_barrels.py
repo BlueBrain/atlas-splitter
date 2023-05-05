@@ -13,7 +13,6 @@ in x,y,z coordinates.
 """
 import copy
 import logging
-from collections import defaultdict
 from typing import Any, Dict, Iterator, List
 
 import numpy as np
@@ -40,7 +39,6 @@ def layer_ids(
         A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
     new_ids = dict()
-
     for name in names:
         new_ids[name] = {}
         new_ids[name][name] = next(id_generator)
@@ -48,7 +46,7 @@ def layer_ids(
         for layer_name in layers:
             new_ids[name][layer_name] = next(id_generator)
 
-    return new_ids
+    return dict(new_ids)
 
 
 def get_hierarchy_by_acronym(hierarchy: HierarchyDict, acronym: str):
@@ -107,7 +105,7 @@ def region_logical_and(positions: np.ndarray, annotation: VoxelData, indices: Li
         region_mask = annotation.raw == indices[0]
     else:
         region_mask = np.isin(annotation.raw, indices)
-    layer_barrel = np.logical_and(region_mask, mask)
+    layer_barrel = np.logical_and(region_mask, mask).astype(bool)
     return layer_barrel
 
 
@@ -208,7 +206,6 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
                         f"{new_barrel['acronym']}-{sublayer}",
                     )
                     layer23_child["children"] = []
-                    assert layer23_child["acronym"].endswith(sublayer)
                     _assert_is_leaf_node(layer23_child)
 
                     children23.append(layer23_child)
