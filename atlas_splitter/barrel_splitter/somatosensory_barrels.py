@@ -38,7 +38,7 @@ def layer_ids(
     Returns:
         A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
-    new_ids: Dict[str, Dict[str, int]] = dict()
+    new_ids: Dict[str, Dict[str, int]] = {}
     for name in names:
         new_ids[name] = {}
         new_ids[name][name] = next(id_generator)
