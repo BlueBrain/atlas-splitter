@@ -38,7 +38,7 @@ def layer_ids(
     Returns:
         A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
-    new_ids = dict()
+    new_ids: Dict[str, Dict[str, int]] = dict()
     for name in names:
         new_ids[name] = {}
         new_ids[name][name] = next(id_generator)
@@ -49,22 +49,29 @@ def layer_ids(
     return dict(new_ids)
 
 
-def get_hierarchy_by_acronym(hierarchy: HierarchyDict, acronym: str):
+def get_hierarchy_by_acronym(hierarchy: HierarchyDict, region_map: RegionMap, start_index: int):
     """Find and return child with a matching acronym from the next level
     of the hierarchy.
 
     Args:
         hierarchy (HierarchyDict): brain regions hierarchy dict
-        acronym (str): name of the region
+        region_map (RegionMap): region map object from voxcell
+        start_index (int): index of the brain region
 
     Returns:
         HierarchyDict: HierarchyDict of the matching child
     """
-    for index, child in enumerate(hierarchy["children"]):
-        if child["acronym"] == acronym:
-            return hierarchy["children"][index]
+    hierarchy_levels = np.array(region_map.get(start_index, attr="acronym", with_ascendants=True))
+    iso_index = np.where(hierarchy_levels == "Isocortex")[0][0]
+    hierarchy_levels = hierarchy_levels[:iso_index]
+    hierarchy_ = get_isocortex_hierarchy(hierarchy)
 
-    return None
+    for acronym in hierarchy_levels[::-1]:
+        for index, child in enumerate(hierarchy_["children"]):
+            if child["acronym"] == acronym:
+                hierarchy_ = hierarchy_["children"][index]
+
+    return hierarchy_
 
 
 def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarray:
@@ -162,18 +169,13 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
     Args:
         hierarchy (HierarchyDict): brain regions hierarchy dict
         new_ids (Dict[int, Dict[str, int]]): set of new ids
+        region_map (RegionMap): region map object from voxcell
         start_index (int): index of the starting brain region (Isocortex)
         children_names (list): list of children volumes to be integrated
         layers (list): list of layers to be integrated
     """
     # pylint: disable=too-many-locals
-    hierarchy_levels = np.array(region_map.get(start_index, attr="acronym", with_ascendants=True))
-    iso_index = np.where(hierarchy_levels == "Isocortex")[0][0]
-    hierarchy_levels = hierarchy_levels[:iso_index]
-    hierarchy_ = get_isocortex_hierarchy(hierarchy)
-
-    for acronym in hierarchy_levels[::-1]:
-        hierarchy_ = get_hierarchy_by_acronym(hierarchy_, acronym)
+    hierarchy_ = get_hierarchy_by_acronym(hierarchy, region_map, start_index)
 
     new_children = hierarchy_["children"]
     for name in children_names:
@@ -234,8 +236,10 @@ def edit_volume(
     cortex in Primary Somatosensory cortex. The columns are also subdivided into layers.
 
     Args:
-        volume (NDArray): whole brain annotated volume.
+        annotation (VoxelData): whole brain annotation
+        region_map (RegionMap): region map object from voxcell
         barrel_positions (pd.DataFrame): x,y,z voxel positions
+        layers (list): list of layers to be integrated
         new_ids (Dict[int, Dict[str, int]]): set of new ids
     """
     for name in barrel_positions.barrel.unique():
