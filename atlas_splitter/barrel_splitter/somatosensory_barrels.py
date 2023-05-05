@@ -39,7 +39,7 @@ def layer_ids(
     Returns:
         A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
-    new_ids: Dict[str, Dict[str, int]] = defaultdict(dict)
+    new_ids = dict()
 
     for name in names:
         new_ids[name] = {}
@@ -82,8 +82,7 @@ def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarra
     """
     mask = np.zeros(annotation.shape, dtype=bool)
     indices = annotation.positions_to_indices(positions)
-    for indx in indices:
-        mask[indx[0], indx[1], indx[2]] = True
+    mask[tuple(indices.T)] = True
     return mask
 
 
@@ -103,13 +102,12 @@ def region_logical_and(positions: np.ndarray, annotation: VoxelData, indices: Li
         np.ndarray: A 3D numpy array of the same shape as `annotation.data` containing
         the resulting binary mask after performing the logical AND operation (bool values).
     """
-    mask = positions_to_mask(positions, annotation).astype(bool)
-    region_mask = np.isin(
-        annotation.raw,
-        indices,
-    ).astype(bool)
-    layer_barrel = np.logical_and(region_mask, mask).astype(bool)
-
+    mask = positions_to_mask(positions, annotation)
+    if len(indices) == 1:
+        region_mask = annotation.raw == indices[0]
+    else:
+        region_mask = np.isin(annotation.raw, indices)
+    layer_barrel = np.logical_and(region_mask, mask)
     return layer_barrel
 
 
@@ -184,8 +182,8 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
         new_barrel = add_hierarchy_child(
             hierarchy_,
             new_ids[name][name],
-            hierarchy_["name"] + f", {name} barrel",
-            hierarchy_["acronym"] + f"-{name}",
+            f"{hierarchy_['name']}, {name} barrel",
+            f"{hierarchy_['acronym']}-{name}",
         )
         assert new_barrel["acronym"].endswith(name)
 
@@ -194,8 +192,8 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
             new_barrel_layer = add_hierarchy_child(
                 new_barrel,
                 new_ids[name][layer],
-                new_barrel["name"] + f" layer {layer}",
-                new_barrel["acronym"] + f"-{layer}",
+                f"{new_barrel['name']} layer {layer}",
+                f"{new_barrel['acronym']}-{layer}",
             )
             assert new_barrel_layer["acronym"].endswith(layer)
 
@@ -206,8 +204,8 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
                     layer23_child = add_hierarchy_child(
                         new_barrel_layer,
                         new_ids[name][sublayer],
-                        new_barrel["name"] + f" layer {sublayer}",
-                        new_barrel["acronym"] + f"-{sublayer}",
+                        f"{new_barrel['name']} layer {sublayer}",
+                        f"{new_barrel['acronym']}-{sublayer}",
                     )
                     layer23_child["children"] = []
                     assert layer23_child["acronym"].endswith(sublayer)
