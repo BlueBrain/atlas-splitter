@@ -16,17 +16,6 @@ from tests.barrel_splitter.utils import (
 TEST_PATH = Path(__file__).parent
 
 new_ids = {
-    "C2": {
-        "C2": 2000,
-        "1": 2001,
-        "2/3": 2004,
-        "2": 2002,
-        "3": 2003,
-        "4": 2005,
-        "5": 2006,
-        "6a": 2007,
-        "6b": 2008,
-    },
     "C1": {
         "C1": 2010,
         "1": 2011,
@@ -37,6 +26,17 @@ new_ids = {
         "5": 2016,
         "6a": 2017,
         "6b": 2018,
+    },
+    "C2": {
+        "C2": 2000,
+        "1": 2001,
+        "2/3": 2004,
+        "2": 2002,
+        "3": 2003,
+        "4": 2005,
+        "5": 2006,
+        "6a": 2007,
+        "6b": 2008,
     },
 }
 
@@ -127,13 +127,25 @@ def test_region_logical_and():
     assert np.all(test == expected)
 
 
+def test_get_hierarchy_by_acronym():
+    hierarchy = get_barrel_cortex_excerpt()
+    region_map_test = RegionMap.from_dict(hierarchy["msg"][0])
+
+    hierarchy_test = tested.get_hierarchy_by_acronym(
+        hierarchy, region_map_test, start_acronym="SSp-bfd"
+    )
+
+    assert hierarchy_test == hierarchy["msg"][0]["children"][0]
+
+
 def test_edit_hierarchy():
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     hierarchy = get_barrel_cortex_excerpt()
     expected_hierarchy = get_barrel_cortex_excerpt_edited()
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
-    tested.edit_hierarchy(hierarchy, new_ids, region_map, 329, ["C1", "C2"], layers)
+    # tested.edit_hierarchy(hierarchy, new_ids, region_map, 329, layers)
+    tested.edit_hierarchy(hierarchy, new_ids, region_map, layers)
     region_map_test = RegionMap.from_dict(hierarchy["msg"][0])
 
     assert hierarchy == expected_hierarchy

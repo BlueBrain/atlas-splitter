@@ -49,18 +49,23 @@ def layer_ids(
     return dict(new_ids)
 
 
-def get_hierarchy_by_acronym(hierarchy: HierarchyDict, region_map: RegionMap, start_index: int):
+def get_hierarchy_by_acronym(
+    hierarchy: HierarchyDict, region_map: RegionMap, start_acronym="SSp-bfd"
+):
     """Find and return child with a matching acronym from the next level
     of the hierarchy.
 
     Args:
         hierarchy (HierarchyDict): brain regions hierarchy dict
         region_map (RegionMap): region map object from voxcell
-        start_index (int): index of the brain region
+        start_acronym (str): acronym name of the brain region
 
     Returns:
         HierarchyDict: HierarchyDict of the matching child
     """
+    indices = region_map.find(start_acronym, attr="acronym", with_descendants=False)
+    start_index = indices.pop()
+
     hierarchy_levels = np.array(region_map.get(start_index, attr="acronym", with_ascendants=True))
     iso_index = np.where(hierarchy_levels == "Isocortex")[0][0]
     hierarchy_levels = hierarchy_levels[:iso_index]
@@ -145,8 +150,6 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
     hierarchy: HierarchyDict,
     new_ids: Dict[str, Dict[str, int]],
     region_map: RegionMap,
-    start_index: int,
-    children_names: List[str],
     layers: List[str],
 ) -> None:
     """Edit in place the hierarchy to include new children volumes of a given
@@ -170,12 +173,11 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
         hierarchy (HierarchyDict): brain regions hierarchy dict
         new_ids (Dict[int, Dict[str, int]]): set of new ids
         region_map (RegionMap): region map object from voxcell
-        start_index (int): index of the starting brain region (Isocortex)
-        children_names (list): list of children volumes to be integrated
         layers (list): list of layers to be integrated
     """
     # pylint: disable=too-many-locals
-    hierarchy_ = get_hierarchy_by_acronym(hierarchy, region_map, start_index)
+    children_names = new_ids.keys()
+    hierarchy_ = get_hierarchy_by_acronym(hierarchy, region_map)
 
     new_children = hierarchy_["children"]
     for name in children_names:
@@ -275,9 +277,6 @@ def split_barrels(
     assert "msg" in hierarchy, "Wrong hierarchy input. The AIBS 1.json file is expected."
 
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
-
-    indices = region_map.find("SSp-bfd", attr="acronym", with_descendants=False)
-    ssp_bfd_index = indices.pop()
     barrel_names = list(np.sort(barrel_positions.barrel.unique()))
 
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
@@ -286,7 +285,7 @@ def split_barrels(
 
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")
-    edit_hierarchy(hierarchy, new_ids, region_map, ssp_bfd_index, barrel_names, layers)
+    edit_hierarchy(hierarchy, new_ids, region_map, layers)
 
     layers = ["1", "2", "3", "4", "5", "6a", "6b"]
     L.info("Editing annotation: barrel columns...")
