@@ -12,6 +12,8 @@ Authors
 * Luc Guyot
 * Mike Gevaert
 * Zisis Eleftherios
+* Aleksandra Teska
+
 
 Contributors
 ------------
