@@ -1,4 +1,4 @@
-.. image:: ../../atlas-splitter.jpg
+.. image:: static/atlas-splitter.jpg
 
 Documentation
 =============
