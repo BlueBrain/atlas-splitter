@@ -1,8 +1,8 @@
 Splitting
 =========
 
-.. automodule:: atlas_splitter.app.layer_splitter
+.. automodule:: atlas_splitter.app.cli
 
-.. click:: atlas_splitter.app.layer_splitter:app
-    :prog: layer_splitter
+.. click:: atlas_splitter.app.cli:cli
+    :prog: split_isocortex_layer_23
     :nested: full

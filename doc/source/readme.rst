@@ -1,2 +1,4 @@
 .. include:: ../../README.rst
-    :start-line: 2 
+   :end-before: .. substitutions
+
+.. |banner| image:: static/atlas-splitter.jpg

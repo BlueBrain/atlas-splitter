@@ -1,4 +1,4 @@
-.. image:: atlas-splitter.jpg
+|banner|
 
 Overview
 =========
@@ -80,3 +80,8 @@ For license and authors, see LICENSE.txt and AUTHORS.txt respectively.
 Copyright © 2022 Blue Brain Project/EPFL
 
 .. _`atlas-direction-vectors`: https://github.com/BlueBrain/atlas-direction-vectors
+
+
+.. substitutions
+
+.. |banner| image:: doc/source/static/atlas-splitter.jpg
