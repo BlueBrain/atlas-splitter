@@ -23,7 +23,7 @@ from __future__ import annotations
 import copy
 import logging
 from collections import defaultdict
-from typing import Any, Dict, Iterator, Set
+from typing import Any, Dict, Set
 
 import numpy as np
 from atlas_commons.typing import BoolArray, FloatArray, NDArray
@@ -31,7 +31,7 @@ from cgal_pybind import slice_volume
 from voxcell import RegionMap, VoxelData
 
 from atlas_splitter.exceptions import AtlasSplitterError
-from atlas_splitter.utils import _assert_is_leaf_node, create_id_generator, get_isocortex_hierarchy
+from atlas_splitter.utils import _assert_is_leaf_node, id_from_acronym, get_isocortex_hierarchy
 
 L = logging.getLogger(__name__)
 
@@ -49,7 +49,6 @@ def edit_hierarchy(
     new_layer_ids: Dict[int, Dict[str, int]],
     ids_to_reuse: Dict[int, Dict[str, int]],
     region_map: RegionMap,
-    id_generator: Iterator[int],
 ) -> None:
     """
     Edit in place layer 2/3 into 2 and 3 within the hierarchy dict.
@@ -88,7 +87,6 @@ def edit_hierarchy(
             Note: with unmodified AIBS 1.json the only ids to be reused are {195, 747, 524, 606}.
                 They correspond to region name endings with "layer 2" only.
         region_map: map to navigate the brain regions hierarchy.
-        id_generator: iterator generating new region identifiers.
 
     Note:
         The following attributes of the created nodes are copies of the
@@ -127,15 +125,14 @@ def edit_hierarchy(
             # Create children
             new_children = []
             for layer in ["layer_2", "layer_3"]:
+                new_child = copy.deepcopy(child)
+                new_child["acronym"] = child["acronym"][:-3] + layer[-1]
                 if child["id"] in ids_to_reuse and layer in ids_to_reuse[child["id"]]:
                     new_layer_ids[child["id"]][layer] = ids_to_reuse[child["id"]][layer]
                 else:
-                    new_layer_ids[child["id"]][layer] = next(id_generator)
-                new_child = copy.deepcopy(child)
-                new_child["acronym"] = child["acronym"][:-3]
+                    new_layer_ids[child["id"]][layer] = id_from_acronym(region_map, new_child["acronym"])
                 new_child["name"] = child["name"][:-3]
                 new_child["id"] = new_layer_ids[child["id"]][layer]
-                new_child["acronym"] = new_child["acronym"] + layer[-1]
                 new_child["name"] = new_child["name"] + layer[-1]
                 new_child["parent_structure_id"] = child["id"]
                 new_children.append(new_child)
@@ -143,7 +140,7 @@ def edit_hierarchy(
             # Populate the current 2/3 leaf node's children
             child["children"] = new_children
         else:
-            edit_hierarchy(child, new_layer_ids, ids_to_reuse, region_map, id_generator)
+            edit_hierarchy(child, new_layer_ids, ids_to_reuse, region_map)
 
 
 def _edit_layer_23_hierarchy(
@@ -173,8 +170,7 @@ def _edit_layer_23_hierarchy(
         isocortex_hierarchy,
         new_layer_ids,
         ids_to_reuse,
-        region_map,
-        create_id_generator(region_map),
+        region_map
     )
 
     return new_layer_ids

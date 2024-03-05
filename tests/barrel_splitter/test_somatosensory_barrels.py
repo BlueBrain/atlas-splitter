@@ -42,14 +42,14 @@ new_ids = {
 
 
 def test_layer_ids():
-    id_generator = iter(range(1, 10))
+    region_map = RegionMap.load_json(str(Path(TEST_PATH, "1.json", encoding="utf-8")))
     names = ["region1", "region2", "region3"]
     layers = ["layer1", "layer2"]
-    result = tested.layer_ids(id_generator, names, layers)
+    result = tested.layer_ids(region_map, names, layers)
     expected = {
-        "region1": {"region1": 1, "layer1": 2, "layer2": 3},
-        "region2": {"region2": 4, "layer1": 5, "layer2": 6},
-        "region3": {"region3": 7, "layer1": 8, "layer2": 9},
+        "region1": {"region1": 5293416420, "layer1": 1111509459, "layer2": 8291842637},
+        "region2": {"region2": 9197100151, "layer1": 1048759989, "layer2": 8562892645},
+        "region3": {"region3": 2807168083, "layer1": 2207162267, "layer2": 3619321798},
     }
     assert result == expected
 

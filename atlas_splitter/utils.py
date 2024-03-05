@@ -1,4 +1,5 @@
 """Utilities for splitting atlases."""
+import hashlib
 import itertools as it
 from typing import Any, Dict, Iterator
 
@@ -44,6 +45,28 @@ def create_id_generator(region_map: RegionMap) -> Iterator[int]:
     """
     last = max(region_map.find("root", attr="acronym", with_descendants=True))
     return it.count(start=last + 1)
+
+
+def id_from_acronym(region_map: RegionMap, acronym: str) -> int:
+    """Create an identifier from the input acronym.
+
+    Args:
+        region_map: map to navigate the brain region hierarchy.
+        acronym: str for the region acronym
+
+    Return:
+        region id.
+    """
+    region_id_set = region_map.find(acronym, attr="acronym", with_descendants=False)
+    if region_id_set:
+        [region_id] = region_id_set
+    else:  # acronym not present in hierarchy, generating a corresponding id
+        acronym = acronym.encode("utf-8")
+        sha = hashlib.sha256()
+        sha.update(acronym)
+        region_id = int(str(int(sha.hexdigest(), 16))[0:10])
+
+    return region_id
 
 
 def _assert_is_leaf_node(node) -> None:
