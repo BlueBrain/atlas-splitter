@@ -170,7 +170,7 @@ def _edit_layer_23_hierarchy(
         isocortex_hierarchy,
         new_layer_ids,
         ids_to_reuse,
-        region_map
+        region_map,
     )
 
     return new_layer_ids

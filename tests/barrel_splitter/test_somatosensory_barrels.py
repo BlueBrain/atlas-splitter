@@ -42,7 +42,7 @@ new_ids = {
 
 
 def test_layer_ids():
-    region_map = RegionMap.load_json(str(Path(TEST_PATH, "1.json", encoding="utf-8")))
+    region_map = RegionMap.load_json(str(Path(TEST_PATH, "../1.json", encoding="utf-8")))
     names = ["region1", "region2", "region3"]
     layers = ["layer1", "layer2"]
     result = tested.layer_ids(region_map, names, layers)
