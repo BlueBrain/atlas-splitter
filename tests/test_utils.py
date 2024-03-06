@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy.testing as npt
 import pytest
 from voxcell import RegionMap
+from voxcell.exceptions import VoxcellError
 
 import atlas_splitter.utils as tested
 from atlas_splitter.exceptions import AtlasSplitterError
@@ -54,8 +55,19 @@ def test_get_isocortex_hierarchy_exception():
         assert isocortex_hierarchy["acronym"] == "Isocortex"
 
 
-def test_create_id_generator():
-    region_map = RegionMap.load_json(str(Path(TEST_PATH, "1.json", encoding="utf-8")))
+def test_id_from_acronym(region_map):
+
+    # existing region -> existing id
+    res1 = tested.id_from_acronym(region_map, "VISp1")
+    assert region_map.get(res1, attr="acronym") == "VISp1"
+
+    # new regeion -> non-existing id
+    res2 = tested.id_from_acronym(region_map, "MontyPython")
+    with pytest.raises(VoxcellError, match="Region ID not found"):
+        region_map.get(res2, attr="acronym")
+
+
+def test_create_id_generator(region_map):
     id_generator = tested.create_id_generator(region_map)
 
     npt.assert_array_equal(

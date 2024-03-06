@@ -13,25 +13,25 @@ in x,y,z coordinates.
 """
 import copy
 import logging
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
 from voxcell import RegionMap, VoxelData
 
-from atlas_splitter.utils import _assert_is_leaf_node, create_id_generator, get_isocortex_hierarchy
+from atlas_splitter.utils import _assert_is_leaf_node, get_isocortex_hierarchy, id_from_acronym
 
 L = logging.getLogger(__name__)
 HierarchyDict = Dict[str, Any]
 
 
 def layer_ids(
-    id_generator: Iterator[int], names: List[str], layers: List[str]
+    region_map: RegionMap, names: List[str], layers: List[str]
 ) -> Dict[str, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
-        id_generator: Iterator that generates new ids.
+        region_map: region map object from voxcell
         names: A list of names of the new regions.
         layers: A list of names of the new layer regions.
 
@@ -41,10 +41,10 @@ def layer_ids(
     new_ids: Dict[str, Dict[str, int]] = {}
     for name in names:
         new_ids[name] = {}
-        new_ids[name][name] = next(id_generator)
+        new_ids[name][name] = id_from_acronym(region_map, name)
 
         for layer_name in layers:
-            new_ids[name][layer_name] = next(id_generator)
+            new_ids[name][layer_name] = id_from_acronym(region_map, name + layer_name)
 
     return dict(new_ids)
 
@@ -280,8 +280,7 @@ def split_barrels(
     barrel_names = list(np.sort(barrel_positions.barrel.unique()))
 
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
-    id_generator = create_id_generator(region_map)
-    new_ids = layer_ids(id_generator, barrel_names, layers)
+    new_ids = layer_ids(region_map, barrel_names, layers)
 
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")
