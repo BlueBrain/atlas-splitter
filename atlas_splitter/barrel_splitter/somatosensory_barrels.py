@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 from voxcell import RegionMap, VoxelData
 
-from atlas_splitter.utils import _assert_is_leaf_node, id_from_acronym, get_isocortex_hierarchy
+from atlas_splitter.utils import _assert_is_leaf_node, get_isocortex_hierarchy, id_from_acronym
 
 L = logging.getLogger(__name__)
 HierarchyDict = Dict[str, Any]
@@ -44,7 +44,7 @@ def layer_ids(
         new_ids[name][name] = id_from_acronym(region_map, name)
 
         for layer_name in layers:
-            new_ids[name][layer_name] = id_from_acronym(region_map, name+layer_name)
+            new_ids[name][layer_name] = id_from_acronym(region_map, name + layer_name)
 
     return dict(new_ids)
 

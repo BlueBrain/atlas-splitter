@@ -61,9 +61,9 @@ def id_from_acronym(region_map: RegionMap, acronym: str) -> int:
     if region_id_set:
         [region_id] = region_id_set
     else:  # acronym not present in hierarchy, generating a corresponding id
-        acronym = acronym.encode("utf-8")
+        acronym_b = acronym.encode("utf-8")
         sha = hashlib.sha256()
-        sha.update(acronym)
+        sha.update(acronym_b)
         region_id = int(str(int(sha.hexdigest(), 16))[0:10])
 
     return region_id

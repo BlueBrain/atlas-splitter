@@ -31,7 +31,7 @@ from cgal_pybind import slice_volume
 from voxcell import RegionMap, VoxelData
 
 from atlas_splitter.exceptions import AtlasSplitterError
-from atlas_splitter.utils import _assert_is_leaf_node, id_from_acronym, get_isocortex_hierarchy
+from atlas_splitter.utils import _assert_is_leaf_node, get_isocortex_hierarchy, id_from_acronym
 
 L = logging.getLogger(__name__)
 
@@ -130,7 +130,9 @@ def edit_hierarchy(
                 if child["id"] in ids_to_reuse and layer in ids_to_reuse[child["id"]]:
                     new_layer_ids[child["id"]][layer] = ids_to_reuse[child["id"]][layer]
                 else:
-                    new_layer_ids[child["id"]][layer] = id_from_acronym(region_map, new_child["acronym"])
+                    new_layer_ids[child["id"]][layer] = id_from_acronym(
+                        region_map, new_child["acronym"]
+                    )
                 new_child["name"] = child["name"][:-3]
                 new_child["id"] = new_layer_ids[child["id"]][layer]
                 new_child["name"] = new_child["name"] + layer[-1]
