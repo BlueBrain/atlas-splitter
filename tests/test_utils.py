@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import numpy.testing as npt
 import pytest
 from voxcell import RegionMap
@@ -59,12 +60,23 @@ def test_id_from_acronym(region_map):
 
     # existing region -> existing id
     res1 = tested.id_from_acronym(region_map, "VISp1")
+    _assert_within_integer_type_range(res1, np.uint32)
     assert region_map.get(res1, attr="acronym") == "VISp1"
 
-    # new regeion -> non-existing id
-    res2 = tested.id_from_acronym(region_map, "MontyPython")
+    # new region -> non-existing id
+    res2 = tested.id_from_acronym(region_map, "VISPXXX")
+    _assert_within_integer_type_range(res2, np.uint32)
     with pytest.raises(VoxcellError, match="Region ID not found"):
         region_map.get(res2, attr="acronym")
+
+
+def _assert_within_integer_type_range(value, int_dtype):
+    info = np.iinfo(int_dtype)
+    check = info.min <= value < info.max
+    assert check, (
+        f"Value not within dtype '{int_dtype.__name__}' range: "
+        f"{info.min} <= {value} < {info.max}"
+    )
 
 
 def test_create_id_generator(region_map):

@@ -91,7 +91,7 @@ def test_edit_hierarchy():
             "parent_structure_id": 219,
         },
         {
-            "id": 2438771567,
+            "id": 2906756445,
             "acronym": "MO3",
             "name": "Somatomotor areas, Layer 3",
             "children": [],
@@ -109,7 +109,6 @@ def test_edit_hierarchy():
         ids_to_reuse,
         region_map,
     )
-
     assert isocortex_hierarchy == expected_hierarchy
 
 
