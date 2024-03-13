@@ -9,6 +9,9 @@ from atlas_splitter.exceptions import AtlasSplitterError
 
 HierarchyDict = Dict[str, Any]
 
+MIN_CUSTOM_ID = 1_000_000_000
+MAX_CUSTOM_ID = 4_000_000_000
+
 
 def get_isocortex_hierarchy(allen_hierachy: HierarchyDict):
     """
@@ -61,11 +64,21 @@ def id_from_acronym(region_map: RegionMap, acronym: str) -> int:
     if region_id_set:
         [region_id] = region_id_set
     else:  # acronym not present in hierarchy, generating a corresponding id
-        sha = hashlib.sha256()
-        sha.update(acronym.encode("utf-8"))
-        region_id = int(str(int(sha.hexdigest(), 16))[0:10])
-
+        region_id = _hash_derived_id(acronym)
     return region_id
+
+
+def _hash_derived_id(acronym: str) -> int:
+    """Create an id from the acronym's sha356 digest.
+
+    Notes:
+        The id is generated in the [MIN_CUSTOM_ID, MAX_CUSTOM_ID] interval for two reasons:
+            - Be outside the current ids range
+            - Fit within the range of uint32 annotation dtype
+    """
+    sha = hashlib.sha256(acronym.encode("utf-8"))
+    integer = int.from_bytes(sha.digest(), "big")
+    return MIN_CUSTOM_ID + integer % (MAX_CUSTOM_ID - MIN_CUSTOM_ID)
 
 
 def _assert_is_leaf_node(node) -> None:
