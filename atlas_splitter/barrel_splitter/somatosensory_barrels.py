@@ -26,12 +26,11 @@ HierarchyDict = Dict[str, Any]
 
 
 def layer_ids(
-    region_map: RegionMap, names: List[str], layers: List[str]
+    names: List[str], layers: List[str]
 ) -> Dict[str, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
-        region_map: region map object from voxcell
         names: A list of names of the new regions.
         layers: A list of names of the new layer regions.
 
@@ -41,10 +40,10 @@ def layer_ids(
     new_ids: Dict[str, Dict[str, int]] = {}
     for name in names:
         new_ids[name] = {}
-        new_ids[name][name] = id_from_acronym(region_map, name)
+        new_ids[name][name] = None
 
         for layer_name in layers:
-            new_ids[name][layer_name] = id_from_acronym(region_map, name + layer_name)
+            new_ids[name][layer_name] = None
 
     return dict(new_ids)
 
@@ -129,7 +128,7 @@ def add_hierarchy_child(
 
     Args:
         parent: The parent structure to which the child is being added.
-        id: The unique identifier for the child.
+        id_: The unique identifier for the child.
         name: The name of the child.
         acronym: The acronym for the child.
 
@@ -153,7 +152,7 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
     layers: List[str],
 ) -> None:
     """Edit in place the hierarchy to include new children volumes of a given
-    region. Implemented to integrated the barrel columns into [SSp-bfd]
+    region. Implemented to integrate the barrel columns into [SSp-bfd]
     Barrel cortex in Primary Somatosensory cortex.
 
     Note:
@@ -181,21 +180,25 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
 
     new_children = hierarchy_["children"]
     for name in children_names:
+        child_acronym = f"{hierarchy_['acronym']}-{name}"
+        new_ids[name][name] = id_from_acronym(region_map, child_acronym)
         new_barrel = add_hierarchy_child(
             hierarchy_,
             new_ids[name][name],
             f"{hierarchy_['name']}, {name} barrel",
-            f"{hierarchy_['acronym']}-{name}",
+            child_acronym,
         )
         assert new_barrel["acronym"].endswith(name)
 
         new_barrelchildren = []
         for layer in layers:
+            layer_acronym = f"{new_barrel['acronym']}-{layer}"
+            new_ids[name][layer] = id_from_acronym(region_map, layer_acronym)
             new_barrel_layer = add_hierarchy_child(
                 new_barrel,
                 new_ids[name][layer],
                 f"{new_barrel['name']} layer {layer}",
-                f"{new_barrel['acronym']}-{layer}",
+                layer_acronym,
             )
             assert new_barrel_layer["acronym"].endswith(layer)
 
@@ -203,11 +206,13 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
             if layer == "2/3":
                 children23 = []
                 for sublayer in ["2", "3"]:
+                    sublayer_acronym = f"{new_barrel['acronym']}-{sublayer}"
+                    new_ids[name][sublayer] = id_from_acronym(region_map, sublayer_acronym)
                     layer23_child = add_hierarchy_child(
                         new_barrel_layer,
                         new_ids[name][sublayer],
                         f"{new_barrel['name']} layer {sublayer}",
-                        f"{new_barrel['acronym']}-{sublayer}",
+                        sublayer_acronym,
                     )
                     layer23_child["children"] = []
                     _assert_is_leaf_node(layer23_child)
@@ -234,7 +239,7 @@ def edit_volume(
     new_ids: Dict[str, Dict[str, int]],
 ) -> None:
     """Edit in place the volume of the barrel cortex to include the barrel columns as
-    separate ids. Implemented to integrated the barrel columns into [SSp-bfd] Barrel
+    separate ids. Implemented to integrate the barrel columns into [SSp-bfd] Barrel
     cortex in Primary Somatosensory cortex. The columns are also subdivided into layers.
 
     Args:
@@ -280,7 +285,7 @@ def split_barrels(
     barrel_names = list(np.sort(barrel_positions.barrel.unique()))
 
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
-    new_ids = layer_ids(region_map, barrel_names, layers)
+    new_ids = layer_ids(barrel_names, layers)
 
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")

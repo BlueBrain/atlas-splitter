@@ -42,15 +42,14 @@ new_ids = {
 
 
 def test_layer_ids():
-    region_map = RegionMap.load_json(str(Path(TEST_PATH, "../1.json", encoding="utf-8")))
     names = ["region1", "region2", "region3"]
     layers = ["layer1", "layer2"]
-    result = tested.layer_ids(region_map, names, layers)
+    result = tested.layer_ids(names, layers)
 
     expected = {
-        "region1": {"region1": 3631290122, "layer1": 2267454475, "layer2": 1012379119},
-        "region2": {"region2": 1722831506, "layer1": 3787876483, "layer2": 1416363748},
-        "region3": {"region3": 1193141608, "layer1": 3031486657, "layer2": 3890489924},
+        "region1": {"region1": None, "layer1": None, "layer2": None},
+        "region2": {"region2": None, "layer1": None, "layer2": None},
+        "region3": {"region3": None, "layer1": None, "layer2": None},
     }
     assert result == expected
 
@@ -158,7 +157,7 @@ def test_edit_hierarchy():
         np.size(bc_hierarchy["children"][-1]["children"][1]["children"]) == 2
     )  # barrel layer 2/3 children
 
-    assert region_map_test.get(2001, attr="acronym", with_ascendants=True) == [
+    assert region_map_test.get(1082141991, attr="acronym", with_ascendants=True) == [
         "SSp-bfd-C2-1",
         "SSp-bfd-C2",
         "SSp-bfd",
@@ -166,12 +165,12 @@ def test_edit_hierarchy():
     ]
 
     assert list(region_map_test.find("@.*3[ab]?$", attr="acronym")) == [
-        201,  # SSp-bfd2/3
-        1999,  # SSp-bfd3
-        2003,  # SSp-bfd-C2-3
-        2004,  # SSp-bfd-C2-2/3
-        2013,  # SSp-bfd-C1-3
-        2014,  # SSp-bfd-C1-2/3
+        2563782304,  # SSp-bfd2/3
+        1714311201,  # SSp-bfd3
+        201,  # SSp-bfd-C2-3
+        2157537321,  # SSp-bfd-C2-2/3
+        1999,  # SSp-bfd-C1-3
+        1667660763,  # SSp-bfd-C1-2/3
     ]
 
 
@@ -187,26 +186,28 @@ def test_edit_volume():
     assert np.all(test[0, :, :] == 0)
     assert np.all(test[2, :, :] == 0)
 
-    assert np.all(test[1, 0:5, 10] == 2001)  # C2-layer 1
-    assert np.all(test[1, 5:10, 10] == 2002)  # C2-layer 2
-    assert np.all(test[1, 10:20, 10] == 2003)  # C2-layer 3
-    assert np.all(test[1, 20:30, 10] == 2005)  # C2-layer 4
-    assert np.all(test[1, 30:40, 10] == 2006)  # C2-layer 5
-    assert np.all(test[1, 40:50, 10] == 2007)  # C2-layer 6a
-    assert np.all(test[1, 50:, 10] == 2008)  # C2-layer 6b
+    assert np.all(test[1, 0:5, 10] == 1082141991)  # C2-layer 1
+    assert np.all(test[1, 5:10, 10] == 2525505631)  # C2-layer 2
+    assert np.all(test[1, 10:20, 10] == 1714311201)  # C2-layer 3
+    assert np.all(test[1, 20:30, 10] == 2930307508)  # C2-layer 4
+    assert np.all(test[1, 30:40, 10] == 3188993656)  # C2-layer 5
+    assert np.all(test[1, 40:50, 10] == 1843338795)  # C2-layer 6a
+    assert np.all(test[1, 50:, 10] == 3291535006)  # C2-layer 6b
 
-    assert np.all(test[1, 0:5, 20] == 2011)  # C1-layer 1
-    assert np.all(test[1, 5:10, 20] == 2012)  # C1-layer 2
-    assert np.all(test[1, 10:20, 20] == 2013)  # C1-layer 3
-    assert np.all(test[1, 20:30, 20] == 2015)  # C1-layer 4
-    assert np.all(test[1, 30:40, 20] == 2016)  # C1-layer 5
-    assert np.all(test[1, 40:50, 20] == 2017)  # C1-layer 6a
-    assert np.all(test[1, 50:, 20] == 2018)  # C1-layer 6b
+    assert np.all(test[1, 0:5, 20] == 1337935688)  # C1-layer 1
+    assert np.all(test[1, 5:10, 20] == 1558550786)  # C1-layer 2
+    assert np.all(test[1, 10:20, 20] == 2563782304)  # C1-layer 3
+    assert np.all(test[1, 20:30, 20] == 3219108088)  # C1-layer 4
+    assert np.all(test[1, 30:40, 20] == 1420546517)  # C1-layer 5
+    assert np.all(test[1, 40:50, 20] == 1945434117)  # C1-layer 6a
+    assert np.all(test[1, 50:, 20] == 2866280389)  # C1-layer 6b
 
     assert np.all(test[1, 0:5, 0:10] == 981)  # non-barrel layer 1
     assert np.all(test[1, 5:10, 0:10] == 1998)  # non-barrel layer 2
     assert np.all(test[1, 10:20, 0:10] == 1999)  # non-barrel layer 3
     assert np.all(test[1, 20:30, 0:10] == 1047)  # non-barrel layer 4
     assert np.all(test[1, 30:40, 0:10] == 1070)  # non-barrel layer 5
+    print(test[1, 40:50, 0:10])
     assert np.all(test[1, 40:50, 0:10] == 1038)  # non-barrel layer 6a
+    print(test[1, 50:, 0:10])
     assert np.all(test[1, 50:, 0:10] == 1062)  # non-barrel layer 6b
