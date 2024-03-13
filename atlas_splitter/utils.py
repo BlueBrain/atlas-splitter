@@ -69,7 +69,7 @@ def id_from_acronym(region_map: RegionMap, acronym: str) -> int:
 
 
 def _hash_derived_id(acronym: str) -> int:
-    """Create an id from the acronym's sha356 digest.
+    """Create an id from the acronym's sha256 digest.
 
     Notes:
         The id is generated in the [MIN_CUSTOM_ID, MAX_CUSTOM_ID] interval for two reasons:
