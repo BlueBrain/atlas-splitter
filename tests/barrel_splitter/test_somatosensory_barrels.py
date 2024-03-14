@@ -15,7 +15,7 @@ from tests.barrel_splitter.utils import (
 
 TEST_PATH = Path(__file__).parent
 
-new_ids = {
+NEW_IDS = {
     "C1": {
         "C1": 2010,
         "1": 2011,
@@ -41,16 +41,16 @@ new_ids = {
 }
 
 
-def test_layer_ids():
-    region_map = RegionMap.load_json(str(Path(TEST_PATH, "../1.json", encoding="utf-8")))
+def test_layer_ids(region_map):
+    region = "my-region"
     names = ["region1", "region2", "region3"]
     layers = ["layer1", "layer2"]
-    result = tested.layer_ids(region_map, names, layers)
+    result = tested.layer_ids(region, names, layers, region_map)
 
     expected = {
-        "region1": {"region1": 3631290122, "layer1": 2267454475, "layer2": 1012379119},
-        "region2": {"region2": 1722831506, "layer1": 3787876483, "layer2": 1416363748},
-        "region3": {"region3": 1193141608, "layer1": 3031486657, "layer2": 3890489924},
+        "region1": {"region1": 3100903567, "layer1": 3343828692, "layer2": 2819474802},
+        "region2": {"region2": 2741980671, "layer1": 3212473027, "layer2": 1147204648},
+        "region3": {"region3": 3227521405, "layer1": 3371952578, "layer2": 1691103868},
     }
     assert result == expected
 
@@ -139,19 +139,21 @@ def test_get_hierarchy_by_acronym():
     assert hierarchy_test == hierarchy["msg"][0]["children"][0]
 
 
-def test_edit_hierarchy():
+def test_edit_hierarchy(region_map):
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     hierarchy = get_barrel_cortex_excerpt()
     expected_hierarchy = get_barrel_cortex_excerpt_edited()
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
-    # tested.edit_hierarchy(hierarchy, new_ids, region_map, 329, layers)
-    tested.edit_hierarchy(hierarchy, new_ids, region_map, layers)
+    region = "SSp-bfd"
+    # tested.edit_hierarchy(hierarchy, NEW_IDS, region_map, 329, layers)
+    tested.edit_hierarchy(region, hierarchy, NEW_IDS, region_map, layers)
     region_map_test = RegionMap.from_dict(hierarchy["msg"][0])
 
     assert hierarchy == expected_hierarchy
 
     bc_hierarchy = hierarchy["msg"][0]["children"][0]
+
     assert np.size(bc_hierarchy["children"]) == 8  # barrel cortex children
     assert np.size(bc_hierarchy["children"][-1]["children"]) == 6  # barrel children
     assert (
@@ -175,13 +177,31 @@ def test_edit_hierarchy():
     ]
 
 
+@pytest.mark.parametrize(
+    "region,layer,sublayer, expected",
+    [
+        ("SSp-bfd3", None, None, "SSp-bfd3"),
+        ("SSp-bfd", "C2", None, "SSp-bfd-C2"),
+        ("SSp-bfd", "C2", 3, "SSp-bfd-C2-3"),
+    ],
+)
+def test_acronym(region, layer, sublayer, expected):
+    res = tested._acronym(region, layer, sublayer)
+    assert res == expected
+
+
+def test_acronym__raises():
+    with pytest.raises(AssertionError):
+        tested._acronym("SSp-bfd", None, "foo")
+
+
 def test_edit_volume():
     layers = ["1", "2", "3", "4", "5", "6a", "6b"]
     annotation_test, positions = get_barrel_splitter_input_data()
     hierarchy = get_barrel_cortex_excerpt_edited()
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
-    tested.edit_volume(annotation_test, region_map, positions, layers, new_ids)
+    tested.edit_volume(annotation_test, region_map, positions, layers, NEW_IDS)
     test = annotation_test.raw
     assert test.shape == (3, 57, 57)
     assert np.all(test[0, :, :] == 0)

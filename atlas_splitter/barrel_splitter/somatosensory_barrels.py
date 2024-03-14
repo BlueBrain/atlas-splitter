@@ -11,6 +11,7 @@ split into 2 and 3.
 The code relays on pd.DataFrame containing the annotated positions of each barrel voxel
 in x,y,z coordinates.
 """
+
 import copy
 import logging
 from typing import Any, Dict, List
@@ -26,12 +27,12 @@ HierarchyDict = Dict[str, Any]
 
 
 def layer_ids(
-    region_map: RegionMap, names: List[str], layers: List[str]
+    region: str, names: List[str], layers: List[str], region_map
 ) -> Dict[str, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
-        region_map: region map object from voxcell
+        region: Base barrel region acronym. Example: SSp-bfd
         names: A list of names of the new regions.
         layers: A list of names of the new layer regions.
 
@@ -41,17 +42,16 @@ def layer_ids(
     new_ids: Dict[str, Dict[str, int]] = {}
     for name in names:
         new_ids[name] = {}
-        new_ids[name][name] = id_from_acronym(region_map, name)
-
+        new_ids[name][name] = id_from_acronym(region_map, _acronym(region, name))
         for layer_name in layers:
-            new_ids[name][layer_name] = id_from_acronym(region_map, name + layer_name)
+            new_ids[name][layer_name] = id_from_acronym(
+                region_map, _acronym(region, name, layer_name)
+            )
 
-    return dict(new_ids)
+    return new_ids
 
 
-def get_hierarchy_by_acronym(
-    hierarchy: HierarchyDict, region_map: RegionMap, start_acronym="SSp-bfd"
-):
+def get_hierarchy_by_acronym(hierarchy: HierarchyDict, region_map: RegionMap, start_acronym):
     """Find and return child with a matching acronym from the next level
     of the hierarchy.
 
@@ -129,7 +129,7 @@ def add_hierarchy_child(
 
     Args:
         parent: The parent structure to which the child is being added.
-        id: The unique identifier for the child.
+        id_: The unique identifier for the child.
         name: The name of the child.
         acronym: The acronym for the child.
 
@@ -147,13 +147,14 @@ def add_hierarchy_child(
 
 
 def edit_hierarchy(  # pylint: disable=too-many-arguments
+    region: str,
     hierarchy: HierarchyDict,
     new_ids: Dict[str, Dict[str, int]],
     region_map: RegionMap,
     layers: List[str],
 ) -> None:
     """Edit in place the hierarchy to include new children volumes of a given
-    region. Implemented to integrated the barrel columns into [SSp-bfd]
+    region. Implemented to integrate the barrel columns into [SSp-bfd]
     Barrel cortex in Primary Somatosensory cortex.
 
     Note:
@@ -170,6 +171,7 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
         unchanged.
 
     Args:
+        region (str): Barrel region acronym. Example: SSp-bdf2
         hierarchy (HierarchyDict): brain regions hierarchy dict
         new_ids (Dict[int, Dict[str, int]]): set of new ids
         region_map (RegionMap): region map object from voxcell
@@ -177,7 +179,7 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
     """
     # pylint: disable=too-many-locals
     children_names = new_ids.keys()
-    hierarchy_ = get_hierarchy_by_acronym(hierarchy, region_map)
+    hierarchy_ = get_hierarchy_by_acronym(hierarchy, region_map, start_acronym=region)
 
     new_children = hierarchy_["children"]
     for name in children_names:
@@ -185,7 +187,7 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
             hierarchy_,
             new_ids[name][name],
             f"{hierarchy_['name']}, {name} barrel",
-            f"{hierarchy_['acronym']}-{name}",
+            _acronym(region, name),
         )
         assert new_barrel["acronym"].endswith(name)
 
@@ -195,7 +197,7 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
                 new_barrel,
                 new_ids[name][layer],
                 f"{new_barrel['name']} layer {layer}",
-                f"{new_barrel['acronym']}-{layer}",
+                _acronym(region, name, layer),
             )
             assert new_barrel_layer["acronym"].endswith(layer)
 
@@ -207,7 +209,7 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
                         new_barrel_layer,
                         new_ids[name][sublayer],
                         f"{new_barrel['name']} layer {sublayer}",
-                        f"{new_barrel['acronym']}-{sublayer}",
+                        _acronym(region, name, sublayer),
                     )
                     layer23_child["children"] = []
                     _assert_is_leaf_node(layer23_child)
@@ -226,6 +228,18 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
     hierarchy_["children"] = new_children
 
 
+def _acronym(region_acronym, layer=None, sublayer=None):
+    final_acronym = region_acronym
+    if layer:
+        final_acronym += f"-{layer}"
+
+    if sublayer:
+        assert layer is not None, "Sublayer name needs a layer name too, but None passed."
+        final_acronym += f"-{sublayer}"
+
+    return final_acronym
+
+
 def edit_volume(
     annotation: VoxelData,
     region_map: RegionMap,
@@ -234,7 +248,7 @@ def edit_volume(
     new_ids: Dict[str, Dict[str, int]],
 ) -> None:
     """Edit in place the volume of the barrel cortex to include the barrel columns as
-    separate ids. Implemented to integrated the barrel columns into [SSp-bfd] Barrel
+    separate ids. Implemented to integrate the barrel columns into [SSp-bfd] Barrel
     cortex in Primary Somatosensory cortex. The columns are also subdivided into layers.
 
     Args:
@@ -274,17 +288,18 @@ def split_barrels(
         annotation (VoxelData): whole brain annotation
         barrel_positions (pd.DataFrame): x,y,z voxel positions
     """
+    region = "SSp-bfd"
     assert "msg" in hierarchy, "Wrong hierarchy input. The AIBS 1.json file is expected."
 
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
-    barrel_names = list(np.sort(barrel_positions.barrel.unique()))
+    barrel_names = sorted(barrel_positions.barrel.unique())
 
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
-    new_ids = layer_ids(region_map, barrel_names, layers)
+    new_ids = layer_ids(region, barrel_names, layers, region_map)
 
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")
-    edit_hierarchy(hierarchy, new_ids, region_map, layers)
+    edit_hierarchy(region, hierarchy, new_ids, region_map, layers)
 
     layers = ["1", "2", "3", "4", "5", "6a", "6b"]
     L.info("Editing annotation: barrel columns...")
