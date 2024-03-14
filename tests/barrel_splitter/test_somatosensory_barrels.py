@@ -15,7 +15,7 @@ from tests.barrel_splitter.utils import (
 
 TEST_PATH = Path(__file__).parent
 
-new_ids = {
+NEW_IDS = {
     "C1": {
         "C1": 2010,
         "1": 2011,
@@ -41,15 +41,16 @@ new_ids = {
 }
 
 
-def test_layer_ids():
+def test_layer_ids(region_map):
+    region = "my-region"
     names = ["region1", "region2", "region3"]
     layers = ["layer1", "layer2"]
-    result = tested.layer_ids(names, layers)
+    result = tested.layer_ids(region, names, layers, region_map)
 
     expected = {
-        "region1": {"region1": -1, "layer1": -1, "layer2": -1},
-        "region2": {"region2": -1, "layer1": -1, "layer2": -1},
-        "region3": {"region3": -1, "layer1": -1, "layer2": -1},
+        "region1": {"region1": 3100903567, "layer1": 3343828692, "layer2": 2819474802},
+        "region2": {"region2": 2741980671, "layer1": 3212473027, "layer2": 1147204648},
+        "region3": {"region3": 3227521405, "layer1": 3371952578, "layer2": 1691103868},
     }
     assert result == expected
 
@@ -138,26 +139,28 @@ def test_get_hierarchy_by_acronym():
     assert hierarchy_test == hierarchy["msg"][0]["children"][0]
 
 
-def test_edit_hierarchy():
+def test_edit_hierarchy(region_map):
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     hierarchy = get_barrel_cortex_excerpt()
     expected_hierarchy = get_barrel_cortex_excerpt_edited()
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
-    # tested.edit_hierarchy(hierarchy, new_ids, region_map, 329, layers)
-    tested.edit_hierarchy(hierarchy, new_ids, region_map, layers)
+    region = "SSp-bfd"
+    # tested.edit_hierarchy(hierarchy, NEW_IDS, region_map, 329, layers)
+    tested.edit_hierarchy(region, hierarchy, NEW_IDS, region_map, layers)
     region_map_test = RegionMap.from_dict(hierarchy["msg"][0])
 
     assert hierarchy == expected_hierarchy
 
     bc_hierarchy = hierarchy["msg"][0]["children"][0]
+
     assert np.size(bc_hierarchy["children"]) == 8  # barrel cortex children
     assert np.size(bc_hierarchy["children"][-1]["children"]) == 6  # barrel children
     assert (
         np.size(bc_hierarchy["children"][-1]["children"][1]["children"]) == 2
     )  # barrel layer 2/3 children
 
-    assert region_map_test.get(1082141991, attr="acronym", with_ascendants=True) == [
+    assert region_map_test.get(2001, attr="acronym", with_ascendants=True) == [
         "SSp-bfd-C2-1",
         "SSp-bfd-C2",
         "SSp-bfd",
@@ -165,13 +168,31 @@ def test_edit_hierarchy():
     ]
 
     assert list(region_map_test.find("@.*3[ab]?$", attr="acronym")) == [
-        2563782304,  # SSp-bfd2/3
-        1714311201,  # SSp-bfd3
-        201,  # SSp-bfd-C2-3
-        2157537321,  # SSp-bfd-C2-2/3
-        1999,  # SSp-bfd-C1-3
-        1667660763,  # SSp-bfd-C1-2/3
+        201,  # SSp-bfd2/3
+        1999,  # SSp-bfd3
+        2003,  # SSp-bfd-C2-3
+        2004,  # SSp-bfd-C2-2/3
+        2013,  # SSp-bfd-C1-3
+        2014,  # SSp-bfd-C1-2/3
     ]
+
+
+@pytest.mark.parametrize(
+    "region,layer,sublayer, expected",
+    [
+        ("SSp-bfd3", None, None, "SSp-bfd3"),
+        ("SSp-bfd", "C2", None, "SSp-bfd-C2"),
+        ("SSp-bfd", "C2", 3, "SSp-bfd-C2-3"),
+    ],
+)
+def test_acronym(region, layer, sublayer, expected):
+    res = tested._acronym(region, layer, sublayer)
+    assert res == expected
+
+
+def test_acronym__raises():
+    with pytest.raises(AssertionError):
+        tested._acronym("SSp-bfd", None, "foo")
 
 
 def test_edit_volume():
@@ -180,27 +201,27 @@ def test_edit_volume():
     hierarchy = get_barrel_cortex_excerpt_edited()
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
 
-    tested.edit_volume(annotation_test, region_map, positions, layers, new_ids)
+    tested.edit_volume(annotation_test, region_map, positions, layers, NEW_IDS)
     test = annotation_test.raw
     assert test.shape == (3, 57, 57)
     assert np.all(test[0, :, :] == 0)
     assert np.all(test[2, :, :] == 0)
 
-    assert np.all(test[1, 0:5, 10] == 1082141991)  # C2-layer 1
-    assert np.all(test[1, 5:10, 10] == 2525505631)  # C2-layer 2
-    assert np.all(test[1, 10:20, 10] == 1714311201)  # C2-layer 3
-    assert np.all(test[1, 20:30, 10] == 2930307508)  # C2-layer 4
-    assert np.all(test[1, 30:40, 10] == 3188993656)  # C2-layer 5
-    assert np.all(test[1, 40:50, 10] == 1843338795)  # C2-layer 6a
-    assert np.all(test[1, 50:, 10] == 3291535006)  # C2-layer 6b
+    assert np.all(test[1, 0:5, 10] == 2001)  # C2-layer 1
+    assert np.all(test[1, 5:10, 10] == 2002)  # C2-layer 2
+    assert np.all(test[1, 10:20, 10] == 2003)  # C2-layer 3
+    assert np.all(test[1, 20:30, 10] == 2005)  # C2-layer 4
+    assert np.all(test[1, 30:40, 10] == 2006)  # C2-layer 5
+    assert np.all(test[1, 40:50, 10] == 2007)  # C2-layer 6a
+    assert np.all(test[1, 50:, 10] == 2008)  # C2-layer 6b
 
-    assert np.all(test[1, 0:5, 20] == 1337935688)  # C1-layer 1
-    assert np.all(test[1, 5:10, 20] == 1558550786)  # C1-layer 2
-    assert np.all(test[1, 10:20, 20] == 2563782304)  # C1-layer 3
-    assert np.all(test[1, 20:30, 20] == 3219108088)  # C1-layer 4
-    assert np.all(test[1, 30:40, 20] == 1420546517)  # C1-layer 5
-    assert np.all(test[1, 40:50, 20] == 1945434117)  # C1-layer 6a
-    assert np.all(test[1, 50:, 20] == 2866280389)  # C1-layer 6b
+    assert np.all(test[1, 0:5, 20] == 2011)  # C1-layer 1
+    assert np.all(test[1, 5:10, 20] == 2012)  # C1-layer 2
+    assert np.all(test[1, 10:20, 20] == 2013)  # C1-layer 3
+    assert np.all(test[1, 20:30, 20] == 2015)  # C1-layer 4
+    assert np.all(test[1, 30:40, 20] == 2016)  # C1-layer 5
+    assert np.all(test[1, 40:50, 20] == 2017)  # C1-layer 6a
+    assert np.all(test[1, 50:, 20] == 2018)  # C1-layer 6b
 
     assert np.all(test[1, 0:5, 0:10] == 981)  # non-barrel layer 1
     assert np.all(test[1, 5:10, 0:10] == 1998)  # non-barrel layer 2

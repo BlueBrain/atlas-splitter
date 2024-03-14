@@ -26,7 +26,7 @@ L = logging.getLogger(__name__)
 HierarchyDict = Dict[str, Any]
 
 
-def layer_ids(names: List[str], layers: List[str]) -> Dict[str, Dict[str, int]]:
+def layer_ids(region, names: List[str], layers: List[str], region_map) -> Dict[str, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
@@ -39,17 +39,16 @@ def layer_ids(names: List[str], layers: List[str]) -> Dict[str, Dict[str, int]]:
     new_ids: Dict[str, Dict[str, int]] = {}
     for name in names:
         new_ids[name] = {}
-        new_ids[name][name] = -1
-
+        new_ids[name][name] = id_from_acronym(region_map, _acronym(region, name))
         for layer_name in layers:
-            new_ids[name][layer_name] = -1
+            new_ids[name][layer_name] = id_from_acronym(
+                region_map, _acronym(region, name, layer_name)
+            )
 
-    return dict(new_ids)
+    return new_ids
 
 
-def get_hierarchy_by_acronym(
-    hierarchy: HierarchyDict, region_map: RegionMap, start_acronym="SSp-bfd"
-):
+def get_hierarchy_by_acronym(hierarchy: HierarchyDict, region_map: RegionMap, start_acronym):
     """Find and return child with a matching acronym from the next level
     of the hierarchy.
 
@@ -145,6 +144,7 @@ def add_hierarchy_child(
 
 
 def edit_hierarchy(  # pylint: disable=too-many-arguments
+    region: str,
     hierarchy: HierarchyDict,
     new_ids: Dict[str, Dict[str, int]],
     region_map: RegionMap,
@@ -175,29 +175,25 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
     """
     # pylint: disable=too-many-locals
     children_names = new_ids.keys()
-    hierarchy_ = get_hierarchy_by_acronym(hierarchy, region_map)
+    hierarchy_ = get_hierarchy_by_acronym(hierarchy, region_map, start_acronym=region)
 
     new_children = hierarchy_["children"]
     for name in children_names:
-        child_acronym = f"{hierarchy_['acronym']}-{name}"
-        new_ids[name][name] = id_from_acronym(region_map, child_acronym)
         new_barrel = add_hierarchy_child(
             hierarchy_,
             new_ids[name][name],
             f"{hierarchy_['name']}, {name} barrel",
-            child_acronym,
+            _acronym(region, name),
         )
         assert new_barrel["acronym"].endswith(name)
 
         new_barrelchildren = []
         for layer in layers:
-            layer_acronym = f"{new_barrel['acronym']}-{layer}"
-            new_ids[name][layer] = id_from_acronym(region_map, layer_acronym)
             new_barrel_layer = add_hierarchy_child(
                 new_barrel,
                 new_ids[name][layer],
                 f"{new_barrel['name']} layer {layer}",
-                layer_acronym,
+                _acronym(region, name, layer),
             )
             assert new_barrel_layer["acronym"].endswith(layer)
 
@@ -205,13 +201,11 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
             if layer == "2/3":
                 children23 = []
                 for sublayer in ["2", "3"]:
-                    sublayer_acronym = f"{new_barrel['acronym']}-{sublayer}"
-                    new_ids[name][sublayer] = id_from_acronym(region_map, sublayer_acronym)
                     layer23_child = add_hierarchy_child(
                         new_barrel_layer,
                         new_ids[name][sublayer],
                         f"{new_barrel['name']} layer {sublayer}",
-                        sublayer_acronym,
+                        _acronym(region, name, sublayer),
                     )
                     layer23_child["children"] = []
                     _assert_is_leaf_node(layer23_child)
@@ -228,6 +222,18 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
         new_children.append(new_barrel)
 
     hierarchy_["children"] = new_children
+
+
+def _acronym(region_acronym, layer=None, sublayer=None):
+    final_acronym = region_acronym
+    if layer:
+        final_acronym += f"-{layer}"
+
+    if sublayer:
+        assert layer is not None, "Sublayer name needs a layer name too, but None passed."
+        final_acronym += f"-{sublayer}"
+
+    return final_acronym
 
 
 def edit_volume(
@@ -278,17 +284,18 @@ def split_barrels(
         annotation (VoxelData): whole brain annotation
         barrel_positions (pd.DataFrame): x,y,z voxel positions
     """
+    region = "SSp-bfd"
     assert "msg" in hierarchy, "Wrong hierarchy input. The AIBS 1.json file is expected."
 
     region_map = RegionMap.from_dict(hierarchy["msg"][0])
-    barrel_names = list(np.sort(barrel_positions.barrel.unique()))
+    barrel_names = sorted(barrel_positions.barrel.unique())
 
     layers = ["1", "2/3", "2", "3", "4", "5", "6a", "6b"]
-    new_ids = layer_ids(barrel_names, layers)
+    new_ids = layer_ids(region, barrel_names, layers, region_map)
 
     layers = ["1", "2/3", "4", "5", "6a", "6b"]
     L.info("Editing hierarchy: barrel columns...")
-    edit_hierarchy(hierarchy, new_ids, region_map, layers)
+    edit_hierarchy(region, hierarchy, new_ids, region_map, layers)
 
     layers = ["1", "2", "3", "4", "5", "6a", "6b"]
     L.info("Editing annotation: barrel columns...")
