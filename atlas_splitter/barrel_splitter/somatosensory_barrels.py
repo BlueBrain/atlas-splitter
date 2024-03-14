@@ -26,10 +26,13 @@ L = logging.getLogger(__name__)
 HierarchyDict = Dict[str, Any]
 
 
-def layer_ids(region, names: List[str], layers: List[str], region_map) -> Dict[str, Dict[str, int]]:
+def layer_ids(
+    region: str, names: List[str], layers: List[str], region_map
+) -> Dict[str, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
+        region: Base barrel region acronym. Example: SSp-bfd
         names: A list of names of the new regions.
         layers: A list of names of the new layer regions.
 
@@ -168,6 +171,7 @@ def edit_hierarchy(  # pylint: disable=too-many-arguments
         unchanged.
 
     Args:
+        region (str): Barrel region acronym. Example: SSp-bdf2
         hierarchy (HierarchyDict): brain regions hierarchy dict
         new_ids (Dict[int, Dict[str, int]]): set of new ids
         region_map (RegionMap): region map object from voxcell
