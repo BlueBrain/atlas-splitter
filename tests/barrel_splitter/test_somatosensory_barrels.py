@@ -47,9 +47,9 @@ def test_layer_ids():
     result = tested.layer_ids(names, layers)
 
     expected = {
-        "region1": {"region1": None, "layer1": None, "layer2": None},
-        "region2": {"region2": None, "layer1": None, "layer2": None},
-        "region3": {"region3": None, "layer1": None, "layer2": None},
+        "region1": {"region1": -1, "layer1": -1, "layer2": -1},
+        "region2": {"region2": -1, "layer1": -1, "layer2": -1},
+        "region3": {"region3": -1, "layer1": -1, "layer2": -1},
     }
     assert result == expected
 
@@ -207,7 +207,5 @@ def test_edit_volume():
     assert np.all(test[1, 10:20, 0:10] == 1999)  # non-barrel layer 3
     assert np.all(test[1, 20:30, 0:10] == 1047)  # non-barrel layer 4
     assert np.all(test[1, 30:40, 0:10] == 1070)  # non-barrel layer 5
-    print(test[1, 40:50, 0:10])
     assert np.all(test[1, 40:50, 0:10] == 1038)  # non-barrel layer 6a
-    print(test[1, 50:, 0:10])
     assert np.all(test[1, 50:, 0:10] == 1062)  # non-barrel layer 6b

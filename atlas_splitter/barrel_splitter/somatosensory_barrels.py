@@ -11,6 +11,7 @@ split into 2 and 3.
 The code relays on pd.DataFrame containing the annotated positions of each barrel voxel
 in x,y,z coordinates.
 """
+
 import copy
 import logging
 from typing import Any, Dict, List
@@ -25,9 +26,7 @@ L = logging.getLogger(__name__)
 HierarchyDict = Dict[str, Any]
 
 
-def layer_ids(
-    names: List[str], layers: List[str]
-) -> Dict[str, Dict[str, int]]:
+def layer_ids(names: List[str], layers: List[str]) -> Dict[str, Dict[str, int]]:
     """Create a dictionary of ids for the new regions with layer subregions.
 
     Args:
@@ -40,10 +39,10 @@ def layer_ids(
     new_ids: Dict[str, Dict[str, int]] = {}
     for name in names:
         new_ids[name] = {}
-        new_ids[name][name] = None
+        new_ids[name][name] = -1
 
         for layer_name in layers:
-            new_ids[name][layer_name] = None
+            new_ids[name][layer_name] = -1
 
     return dict(new_ids)
 
