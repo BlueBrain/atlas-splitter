@@ -15,7 +15,7 @@ setup(
         "click>=7.0",
         "cgal-pybind>=0.1.3",
         "numpy>=1.15.0",
-        "voxcell>=3.0.0",
+        "voxcell>=3.1.7",  # VoxelToIndexValues
         "pyarrow>=8.0.0",
     ],
     extras_require={
