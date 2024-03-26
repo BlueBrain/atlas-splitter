@@ -97,7 +97,12 @@ def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarra
     return mask
 
 
-def region_logical_and(positions: np.ndarray, annotation: VoxelData, annotation_idnex: ValueToIndexVoxels, indices: List) -> np.ndarray:
+def region_logical_and(
+    positions: np.ndarray,
+    annotation: VoxelData,
+    annotation_index: ValueToIndexVoxels,
+    indices: List,
+) -> np.ndarray:
     """Perform a logical AND operation between the binary mask of a region
     defined by a given set of positions and the binary mask of the region
     specified by the region name. Function used to merge barrel  columns and layers.
@@ -113,26 +118,19 @@ def region_logical_and(positions: np.ndarray, annotation: VoxelData, annotation_
         np.ndarray: A 3D numpy array of the same shape as `annotation.data` containing
         the resulting binary mask after performing the logical AND operation (bool values).
     """
-    ijk_voxels = annotation.positions_to_indices(positions)
-
-    mask = _region_mask(index, annotation.raw.shape)
-    mask[tuple(indices.T)] = True
-
-    return mask
-
-
-def _region_mask(index, shape, region_ids):
-
-    mask = np.zeros(shape=np.prod(shape), dtype=bool)
-
+    arrays_of_indices = [
+        _positions_to_1d_indices(positions, annotation, annotation_index._order)
+    ]
     for region_id in indices:
-        voxel_indices = index.value_to_1d_voxels(region_id)
-        mask[voxel_indices] = True
+        voxel_indices = annotation_index.value_to_1d_indices(region_id)
+        arrays_of_indices.append(voxel_indices)
 
-    return mask.reshape(shape, order=index._order)
+    return np.hstack(arrays_of_indices)
 
 
-    
+def _positions_to_1d_indices(positions, annotation, order):
+    ijk_voxels = annotation.positions_to_indices(positions)
+    return np.ravel_multi_index(ijk_voxels.T, annotation.raw.shape, order=order)
 
 
 def add_hierarchy_child(
@@ -253,6 +251,7 @@ def _acronym(region_acronym, layer=None, sublayer=None):
 
     return final_acronym
 
+
 def edit_volume(
     annotation: VoxelData,
     region_map: RegionMap,
@@ -273,16 +272,16 @@ def edit_volume(
     """
     annotation_index = ValueToIndexVoxels(annotation.raw)
     flat_annotation_view = annotation_index.ravel(annotation.raw)
-
-    for name in barrel_positions.barrel.unique():
-        positions = barrel_positions[barrel_positions.barrel == name][["x", "y", "z"]].values
+    for name, barrel in barrel_positions.groupby("barrel"):
+        positions = barrel[["x", "y", "z"]].values
         for layer in layers:
             region = f"SSp-bfd{layer}"
             new_id = new_ids[name][layer]
             region_indices = list(region_map.find(region, attr="acronym", with_descendants=True))
-            layer_barrel = region_logical_and(positions, annotation, annotation_index, region_indices)
-
-            annotation.raw[layer_barrel] = new_id
+            barrel_indices = region_logical_and(
+                positions, annotation, annotation_index, region_indices
+            )
+            flat_annotation_view[barrel_indices] = new_id
 
 
 def split_barrels(
