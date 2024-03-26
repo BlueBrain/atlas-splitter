@@ -19,6 +19,7 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 from voxcell import RegionMap, VoxelData
+from voxcell.voxel_data import ValueToIndexVoxels
 
 from atlas_splitter.utils import _assert_is_leaf_node, get_isocortex_hierarchy, id_from_acronym
 
@@ -96,7 +97,7 @@ def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarra
     return mask
 
 
-def region_logical_and(positions: np.ndarray, annotation: VoxelData, indices: List) -> np.ndarray:
+def region_logical_and(positions: np.ndarray, annotation: VoxelData, annotation_idnex: ValueToIndexVoxels, indices: List) -> np.ndarray:
     """Perform a logical AND operation between the binary mask of a region
     defined by a given set of positions and the binary mask of the region
     specified by the region name. Function used to merge barrel  columns and layers.
@@ -112,13 +113,26 @@ def region_logical_and(positions: np.ndarray, annotation: VoxelData, indices: Li
         np.ndarray: A 3D numpy array of the same shape as `annotation.data` containing
         the resulting binary mask after performing the logical AND operation (bool values).
     """
-    mask = positions_to_mask(positions, annotation)
-    if len(indices) == 1:
-        region_mask = annotation.raw == indices[0]
-    else:
-        region_mask = np.isin(annotation.raw, indices)
-    layer_barrel = np.logical_and(region_mask, mask).astype(bool)
-    return layer_barrel
+    ijk_voxels = annotation.positions_to_indices(positions)
+
+    mask = _region_mask(index, annotation.raw.shape)
+    mask[tuple(indices.T)] = True
+
+    return mask
+
+
+def _region_mask(index, shape, region_ids):
+
+    mask = np.zeros(shape=np.prod(shape), dtype=bool)
+
+    for region_id in indices:
+        voxel_indices = index.value_to_1d_voxels(region_id)
+        mask[voxel_indices] = True
+
+    return mask.reshape(shape, order=index._order)
+
+
+    
 
 
 def add_hierarchy_child(
@@ -239,7 +253,6 @@ def _acronym(region_acronym, layer=None, sublayer=None):
 
     return final_acronym
 
-
 def edit_volume(
     annotation: VoxelData,
     region_map: RegionMap,
@@ -258,13 +271,16 @@ def edit_volume(
         layers (list): list of layers to be integrated
         new_ids (Dict[int, Dict[str, int]]): set of new ids
     """
+    annotation_index = ValueToIndexVoxels(annotation.raw)
+    flat_annotation_view = annotation_index.ravel(annotation.raw)
+
     for name in barrel_positions.barrel.unique():
         positions = barrel_positions[barrel_positions.barrel == name][["x", "y", "z"]].values
         for layer in layers:
             region = f"SSp-bfd{layer}"
             new_id = new_ids[name][layer]
             region_indices = list(region_map.find(region, attr="acronym", with_descendants=True))
-            layer_barrel = region_logical_and(positions, annotation, region_indices)
+            layer_barrel = region_logical_and(positions, annotation, annotation_index, region_indices)
 
             annotation.raw[layer_barrel] = new_id
 
