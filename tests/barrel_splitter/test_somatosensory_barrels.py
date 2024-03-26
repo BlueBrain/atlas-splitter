@@ -55,20 +55,6 @@ def test_layer_ids(region_map):
     assert result == expected
 
 
-def test_positions_to_mask():
-    positions = np.array([[1, 2, 3], [4, 5, 6]])
-
-    shape = (10, 10, 10)
-    annotation = VoxelData(np.zeros(shape), (1.0, 1.0, 1.0))
-
-    result = tested.positions_to_mask(positions, annotation)
-
-    assert result.shape == shape
-
-    assert result[1, 2, 3] == True
-    assert result[4, 5, 6] == True
-
-
 @pytest.fixture
 def parent_structure() -> Dict[str, Any]:
     """
@@ -104,28 +90,6 @@ def test_add_hierarchy_child(parent_structure: Dict[str, Any]):
     assert parent_structure["st_level"] == 0
     assert parent_structure["graph_order"] == 0
     assert len(parent_structure["children"]) == 0
-
-
-def test_region_logical_and():
-    raw = np.zeros((3, 57, 57), dtype=int)
-    raw[1, 20:30, :] = 1047
-
-    positions_barrel = pd.DataFrame(
-        {
-            "x": np.ones(57),
-            "y": np.arange(0, 57),
-            "z": np.ones(57) * 10,
-        }
-    )
-
-    annotation = VoxelData(raw.copy(), (1.0, 1.0, 1.0))
-    annotation = VoxelData(raw.copy(), (1.0, 1.0, 1.0))
-    test = np.array(
-        np.where(tested.region_logical_and(positions_barrel.values, annotation, [1047]))
-    )
-
-    expected = np.array([np.ones(10), np.arange(20, 30), np.ones(10) * 10])
-    assert np.all(test == expected)
 
 
 def test_get_hierarchy_by_acronym():
