@@ -9,8 +9,8 @@ from atlas_splitter.exceptions import AtlasSplitterError
 
 HierarchyDict = Dict[str, Any]
 
-MIN_CUSTOM_ID = 1_000_000_000
-MAX_CUSTOM_ID = 4_000_000_000
+MIN_CUSTOM_ID = 20_000
+MAX_CUSTOM_ID = 30_000
 
 
 def get_isocortex_hierarchy(allen_hierachy: HierarchyDict):
@@ -74,7 +74,7 @@ def _hash_derived_id(acronym: str) -> int:
     Notes:
         The id is generated in the [MIN_CUSTOM_ID, MAX_CUSTOM_ID] interval for two reasons:
             - Be outside the current ids range
-            - Fit within the range of uint32 annotation dtype
+            - Fit within the range of int16
     """
     sha = hashlib.sha256(acronym.encode("utf-8"))
     integer = int.from_bytes(sha.digest(), "big")
