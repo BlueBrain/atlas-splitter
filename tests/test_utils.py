@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 
 import numpy as np
-import numpy.testing as npt
 import pytest
 from voxcell import RegionMap
 from voxcell.exceptions import VoxcellError
@@ -57,7 +56,6 @@ def test_get_isocortex_hierarchy_exception():
 
 
 def test_id_from_acronym(region_map):
-
     # existing region -> existing id
     res1 = tested.id_from_acronym(region_map, "VISp1")
     _assert_within_integer_type_range(res1, np.uint32)
@@ -69,6 +67,15 @@ def test_id_from_acronym(region_map):
     with pytest.raises(VoxcellError, match="Region ID not found"):
         region_map.get(res2, attr="acronym")
 
+    # colliding acronyms
+    c0 = tested._hash_derived_id("aayGz")
+    c1 = tested._hash_derived_id("aalhM")
+    assert c0 == c1
+
+    region_map = RegionMap.from_dict({"id": c0, "acronym": "CollidingAcronym", "children": []})
+    with pytest.raises(RuntimeError, match="Found a collision with acronym 'CollidingAcronym'"):
+        tested.id_from_acronym(region_map, "aalhM")
+
 
 def _assert_within_integer_type_range(value, int_dtype):
     info = np.iinfo(int_dtype)
@@ -76,17 +83,4 @@ def _assert_within_integer_type_range(value, int_dtype):
     assert check, (
         f"Value not within dtype '{int_dtype.__name__}' range: "
         f"{info.min} <= {value} < {info.max}"
-    )
-
-
-def test_create_id_generator(region_map):
-    id_generator = tested.create_id_generator(region_map)
-
-    npt.assert_array_equal(
-        (
-            next(id_generator),
-            next(id_generator),
-            next(id_generator),
-        ),
-        (614454278, 614454279, 614454280),
     )

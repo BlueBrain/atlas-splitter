@@ -130,8 +130,11 @@ def edit_hierarchy(
                 if child["id"] in ids_to_reuse and layer in ids_to_reuse[child["id"]]:
                     new_layer_ids[child["id"]][layer] = ids_to_reuse[child["id"]][layer]
                 else:
+                    extra_ids = set(new_layer_ids.keys()) | set(
+                        id_ for c in new_layer_ids.values() for id_ in c.values()
+                    )
                     new_layer_ids[child["id"]][layer] = id_from_acronym(
-                        region_map, new_child["acronym"]
+                        region_map, new_child["acronym"], extra_ids
                     )
                 new_child["name"] = child["name"][:-3]
                 new_child["id"] = new_layer_ids[child["id"]][layer]
