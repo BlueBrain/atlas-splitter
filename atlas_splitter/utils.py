@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import Any, Dict
 
 from voxcell import RegionMap, VoxcellError
 
 from atlas_splitter.exceptions import AtlasSplitterError
+
+L = logging.getLogger(__name__)
 
 HierarchyDict = Dict[str, Any]
 
@@ -64,6 +67,7 @@ def id_from_acronym(region_map: RegionMap, acronym: str, extra_ids: None | set =
     try:
         acronym = region_map.get(region_id, "acronym")
     except VoxcellError:
+        L.info("Creating new id %s for acronym '%s'", region_id, acronym)
         return region_id
 
     raise RuntimeError(f"Found a collision with acronym '{acronym}'")
