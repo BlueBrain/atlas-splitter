@@ -14,7 +14,7 @@ in x,y,z coordinates.
 
 import copy
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 import numpy as np
 import pandas as pd
@@ -40,14 +40,16 @@ def layer_ids(
         A dictionary that maps each region to a dictionary of its layer subregions and their ids.
     """
     new_ids: Dict[str, Dict[str, int]] = {}
+    extra_ids: Set[int] = set()
     for name in names:
         new_ids[name] = {}
-        new_ids[name][name] = id_from_acronym(region_map, _acronym(region, name))
+        new_id = id_from_acronym(region_map, _acronym(region, name), extra_ids)
+        new_ids[name][name] = new_id
+        extra_ids.add(new_id)
         for layer_name in layers:
-            new_ids[name][layer_name] = id_from_acronym(
-                region_map, _acronym(region, name, layer_name)
-            )
-
+            new_id = id_from_acronym(region_map, _acronym(region, name, layer_name), extra_ids)
+            extra_ids.add(new_id)
+            new_ids[name][layer_name] = new_id
     return new_ids
 
 

@@ -1,11 +1,15 @@
 """Utilities for splitting atlases."""
-import hashlib
-import itertools as it
-from typing import Any, Dict, Iterator
+from __future__ import annotations
 
-from voxcell import RegionMap
+import hashlib
+import logging
+from typing import Any, Dict
+
+from voxcell import RegionMap, VoxcellError
 
 from atlas_splitter.exceptions import AtlasSplitterError
+
+L = logging.getLogger(__name__)
 
 HierarchyDict = Dict[str, Any]
 
@@ -34,38 +38,39 @@ def get_isocortex_hierarchy(allen_hierachy: HierarchyDict):
     return hierarchy
 
 
-def create_id_generator(region_map: RegionMap) -> Iterator[int]:
-    """Create an identifiers generator.
-
-    The generator produces an identifier which is different from all
-    the previous ones and from the identifiers in use in `self.region_map`.
-
-    Args:
-        region_map: map to navigate the brain region hierarchy.
-
-    Return:
-        iterator providing the next id.
-    """
-    last = max(region_map.find("root", attr="acronym", with_descendants=True))
-    return it.count(start=last + 1)
-
-
-def id_from_acronym(region_map: RegionMap, acronym: str) -> int:
+def id_from_acronym(region_map: RegionMap, acronym: str, extra_ids: None | set = None) -> int:
     """Create an identifier from the input acronym.
 
     Args:
         region_map: map to navigate the brain region hierarchy.
         acronym: str for the region acronym
+        extra_ids: a set of IDs that should also be checked for collision
 
     Return:
         region id.
+
+    Raises Exception if the hashed acronym ID already exists
     """
+    if extra_ids is None:
+        extra_ids = set()
+
     region_id_set = region_map.find(acronym, attr="acronym", with_descendants=False)
     if region_id_set:
-        [region_id] = region_id_set
-    else:  # acronym not present in hierarchy, generating a corresponding id
-        region_id = _hash_derived_id(acronym)
-    return region_id
+        return next(iter(region_id_set))
+
+    # acronym not present in hierarchy, generating a corresponding id
+    region_id = _hash_derived_id(acronym)
+
+    if region_id in extra_ids:
+        raise RuntimeError("generated ID exists in extra_ids")
+
+    try:
+        acronym = region_map.get(region_id, "acronym")
+    except VoxcellError:
+        L.info("Creating new id %s for acronym '%s'", region_id, acronym)
+        return region_id
+
+    raise RuntimeError(f"Found a collision with acronym '{acronym}'")
 
 
 def _hash_derived_id(acronym: str) -> int:
