@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Set
 import numpy as np
 import pandas as pd
 from voxcell import RegionMap, VoxelData
+from voxcell.voxel_data import ValueToIndexVoxels
 
 from atlas_splitter.utils import _assert_is_leaf_node, get_isocortex_hierarchy, id_from_acronym
 
@@ -79,48 +80,6 @@ def get_hierarchy_by_acronym(hierarchy: HierarchyDict, region_map: RegionMap, st
                 hierarchy_ = hierarchy_["children"][index]
 
     return hierarchy_
-
-
-def positions_to_mask(positions: np.ndarray, annotation: VoxelData) -> np.ndarray:
-    """Change x, y, z position coordinates into binary mask in 3D boolean array.
-
-    Args:
-        positions: A numpy array of shape (n, 3) representing the x, y, z positions.
-        annotation: A VoxelData object representing the orientation field of the atlas.
-
-    Returns:
-        A numpy array of shape annotation.shape with True values at the indices
-        corresponding to the input positions.
-    """
-    mask = np.zeros(annotation.shape, dtype=bool)
-    indices = annotation.positions_to_indices(positions)
-    mask[tuple(indices.T)] = True
-    return mask
-
-
-def region_logical_and(positions: np.ndarray, annotation: VoxelData, indices: List) -> np.ndarray:
-    """Perform a logical AND operation between the binary mask of a region
-    defined by a given set of positions and the binary mask of the region
-    specified by the region name. Function used to merge barrel  columns and layers.
-
-    Args:
-        positions (np.array): A 2D numpy array of shape (N, 3) containing
-            x, y, z coordinates of positions.
-        annotation (VoxelData): A VoxelData object representing the orientation
-            field of the atlas.
-        indices (List): list of indices to be used for region annotation
-
-    Returns:
-        np.ndarray: A 3D numpy array of the same shape as `annotation.data` containing
-        the resulting binary mask after performing the logical AND operation (bool values).
-    """
-    mask = positions_to_mask(positions, annotation)
-    if len(indices) == 1:
-        region_mask = annotation.raw == indices[0]
-    else:
-        region_mask = np.isin(annotation.raw, indices)
-    layer_barrel = np.logical_and(region_mask, mask).astype(bool)
-    return layer_barrel
 
 
 def add_hierarchy_child(
@@ -260,15 +219,33 @@ def edit_volume(
         layers (list): list of layers to be integrated
         new_ids (Dict[int, Dict[str, int]]): set of new ids
     """
-    for name in barrel_positions.barrel.unique():
-        positions = barrel_positions[barrel_positions.barrel == name][["x", "y", "z"]].values
+    annotation_index = ValueToIndexVoxels(annotation.raw)
+    flat_annotation_view = annotation_index.ravel(annotation.raw)
+    for name, barrel in barrel_positions.groupby("barrel"):
+        barrel_indices = _positions_to_1d_indices(
+            positions=barrel[["x", "y", "z"]].values,
+            annotation=annotation,
+            order=annotation_index._order,
+        )
         for layer in layers:
             region = f"SSp-bfd{layer}"
             new_id = new_ids[name][layer]
-            region_indices = list(region_map.find(region, attr="acronym", with_descendants=True))
-            layer_barrel = region_logical_and(positions, annotation, region_indices)
+            region_indices = _region_to_1d_indices(region, region_map, annotation_index)
+            roi_indices = np.intersect1d(barrel_indices, region_indices)
+            flat_annotation_view[roi_indices] = new_id
 
-            annotation.raw[layer_barrel] = new_id
+
+def _positions_to_1d_indices(positions, annotation, order):
+    ijk_voxels = annotation.positions_to_indices(positions)
+    return np.ravel_multi_index(ijk_voxels.T, annotation.raw.shape, order=order)
+
+
+def _region_to_1d_indices(region, region_map, annotation_index):
+    arrays_of_voxel_indices = [
+        annotation_index.value_to_1d_indices(region_id)
+        for region_id in region_map.find(region, attr="acronym", with_descendants=True)
+    ]
+    return np.hstack(arrays_of_voxel_indices)
 
 
 def split_barrels(
